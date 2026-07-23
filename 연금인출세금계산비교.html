@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>맞춤형 연금 인출 & 세금 시뮬레이터</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --bg: #f8f9fa;
+            --border: #dee2e6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            line-height: 1.5;
+            padding: 15px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        h2 {
+            text-align: center;
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        .section-title {
+            font-weight: bold;
+            color: var(--primary);
+            margin: 15px 0 10px;
+            padding-left: 5px;
+            border-left: 4px solid var(--secondary);
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 12px;
+        }
+        @media (min-width: 600px) {
+            .input-group {
+                flex-direction: row;
+                align-items: center;
+            }
+            .input-group label {
+                flex: 0 0 160px;
+                margin-bottom: 0;
+            }
+        }
+        .input-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+        }
+        .input-group input, .input-group select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            width: 100%;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .input-row > div {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding-right: 10px;
+            background: #fff;
+        }
+        .input-row input {
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+        }
+        .unit { color: #666; font-size: 0.9rem; white-space: nowrap; }
+        
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            flex-wrap: wrap;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        button.run-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        button.run-btn:active { background-color: #2980b9; }
+
+        /* 결과 영역 */
+        #resultArea { display: none; margin-top: 25px; }
+        .summary-card {
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .summary-card h4 { margin-bottom: 10px; color: var(--primary); }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+        .summary-item {
+            background: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .summary-title { font-size: 0.85rem; color: #666; margin-bottom: 5px; }
+        .summary-val { font-weight: bold; font-size: 1.1rem; color: var(--secondary); }
+        .warning { color: var(--accent); }
+
+        /* 상세 테이블 */
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #e9ecef;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+            font-size: 0.85rem;
+        }
+        th, td {
+            padding: 10px;
+            text-align: right;
+            border-bottom: 1px solid var(--border);
+        }
+        th { background: #f8f9fa; font-weight: 600; text-align: center; }
+        td:first-child { text-align: center; font-weight: bold; }
+        .tax-bomb { background-color: #ffeaea; color: var(--accent); font-weight: bold; }
+        
+        .hidden-option { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>연금 인출 & 세금 시뮬레이터</h2>
+
+    <!-- 기본 설정 -->
+    <div class="section-title">1. 연금 수령 기간 설정</div>
+    <div class="input-row" style="margin-bottom: 15px;">
+        <div>
+            <input type="number" id="startAge" value="55" inputmode="numeric" pattern="[0-9]*" placeholder="개시연령">
+            <span class="unit">세 개시</span>
+        </div>
+        <div>
+            <input type="number" id="endAge" value="100" inputmode="numeric" pattern="[0-9]*" placeholder="종료연령">
+            <span class="unit">세 완료</span>
+        </div>
+    </div>
+
+    <!-- 자산 설정 (단위: 만원) -->
+    <div class="section-title">2. 비교할 개시 시점 자산 (단위: 만원)</div>
+    <div class="input-group">
+        <label>자산 1</label>
+        <div style="display:flex; flex:1; align-items:center; border:1px solid var(--border); border-radius:6px; padding-right:10px; background:#fff;">
+            <input type="number" id="asset1" value="30000" inputmode="numeric" pattern="[0-9]*" style="border:none;">
+            <span class="unit">만원</span>
+        </div>
+    </div>
+    <div class="input-group">
+        <label>자산 2</label>
+        <div style="display:flex; flex:1; align-items:center; border:1px solid var(--border); border-radius:6px; padding-right:10px; background:#fff;">
+            <input type="number" id="asset2" value="50000" inputmode="numeric" pattern="[0-9]*" style="border:none;">
+            <span class="unit">만원</span>
+        </div>
+    </div>
+    <div class="input-group">
+        <label>자산 3</label>
+        <div style="display:flex; flex:1; align-items:center; border:1px solid var(--border); border-radius:6px; padding-right:10px; background:#fff;">
+            <input type="number" id="asset3" value="100000" inputmode="numeric" pattern="[0-9]*" style="border:none;">
+            <span class="unit">만원</span>
+        </div>
+    </div>
+
+    <!-- 인출 방식 설정 -->
+    <div class="section-title">3. 인출 방식 선택</div>
+    <div class="input-group">
+        <label>수령 방식</label>
+        <div class="radio-group">
+            <label class="radio-label">
+                <input type="radio" name="withdrawType" value="general" checked onchange="toggleDivYield()"> 일반 인출 (원금+수익 소진)
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="withdrawType" value="dividend" onchange="toggleDivYield()"> 배당 중심 인출 (원금 보존)
+            </label>
+        </div>
+    </div>
+    <div class="input-group hidden-option" id="divYieldGroup">
+        <label>목표 배당률 (%)</label>
+        <input type="number" id="dividendYield" value="4.0" step="0.1" inputmode="decimal">
+    </div>
+
+    <!-- 수익률 및 시나리오 설정 -->
+    <div class="section-title">4. 수익률 및 시나리오 선택</div>
+    <div class="input-group">
+        <label>적용 시나리오</label>
+        <select id="scenarioType" onchange="toggleScenarioInputs()">
+            <option value="normal" selected>일반 (입력한 기대수익률 고정)</option>
+            <option value="mdd">MDD 스트레스 (첫해 폭락장 발생)</option>
+            <option value="mc">몬테카를로 (변동성 반영 생존확률)</option>
+        </select>
+    </div>
+    <div class="input-group">
+        <label>기대 수익률 (%)</label>
+        <input type="number" id="annualReturn" value="5.0" step="0.1" inputmode="decimal">
+    </div>
+    <div class="input-group hidden-option" id="mddGroup">
+        <label>첫해 MDD 하락률 (%)</label>
+        <input type="number" id="mddDrop" value="20" step="1" inputmode="numeric">
+    </div>
+    <div class="input-group hidden-option" id="volGroup">
+        <label>변동성(표준편차 %) </label>
+        <input type="number" id="volatility" value="12" step="1" inputmode="numeric">
+    </div>
+
+    <button class="run-btn" onclick="runSimulation()">시뮬레이션 결과 보기</button>
+
+    <!-- 결과 출력 영역 -->
+    <div id="resultArea">
+        <div class="section-title">시뮬레이션 요약</div>
+        <div class="summary-card">
+            <h4 id="summaryTitle">초년도 수령액 및 세금 비교</h4>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-title" id="lblAsset1">자산 1</div>
+                    <div class="summary-val" id="sumAmt1">-</div>
+                    <div class="summary-title" id="sumTax1" style="margin-top:5px;">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-title" id="lblAsset2">자산 2</div>
+                    <div class="summary-val" id="sumAmt2">-</div>
+                    <div class="summary-title" id="sumTax2" style="margin-top:5px;">-</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-title" id="lblAsset3">자산 3</div>
+                    <div class="summary-val" id="sumAmt3">-</div>
+                    <div class="summary-title" id="sumTax3" style="margin-top:5px;">-</div>
+                </div>
+            </div>
+            <div id="mcSurvivalDiv" style="display:none; margin-top:15px; text-align:center; font-weight:bold;">
+                생존 확률 (1,000회): <span id="mcSurv1"></span> / <span id="mcSurv2"></span> / <span id="mcSurv3"></span>
+            </div>
+        </div>
+
+        <div class="section-title">연도별 상세 결과 보기</div>
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="showTab(1)" id="tabBtn1">자산 1</button>
+            <button class="tab-btn" onclick="showTab(2)" id="tabBtn2">자산 2</button>
+            <button class="tab-btn" onclick="showTab(3)" id="tabBtn3">자산 3</button>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>연령</th>
+                        <th>월 수령액</th>
+                        <th>연 수령액</th>
+                        <th>세율</th>
+                        <th>납부 세금</th>
+                        <th>잔여 자산</th>
+                    </tr>
+                </thead>
+                <tbody id="detailTbody">
+                    <!-- 상세 데이터 렌더링 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalSimulationData = { 1: [], 2: [], 3: [] };
+
+    // UI 토글 함수들
+    function toggleDivYield() {
+        const type = document.querySelector('input[name="withdrawType"]:checked').value;
+        document.getElementById('divYieldGroup').style.display = (type === 'dividend') ? 'flex' : 'none';
+    }
+
+    function toggleScenarioInputs() {
+        const scenario = document.getElementById('scenarioType').value;
+        document.getElementById('mddGroup').style.display = (scenario === 'mdd') ? 'flex' : 'none';
+        document.getElementById('volGroup').style.display = (scenario === 'mc') ? 'flex' : 'none';
+    }
+
+    // 포맷팅 헬퍼
+    const formatMoney = (num) => Math.round(num).toLocaleString();
+    
+    // 정규분포 난수 발생
+    function randn_bm() {
+        let u = 0, v = 0;
+        while(u === 0) u = Math.random();
+        while(v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    // 메인 시뮬레이션 함수
+    function runSimulation() {
+        const startAge = parseInt(document.getElementById('startAge').value) || 55;
+        const endAge = parseInt(document.getElementById('endAge').value) || 100;
+        
+        // 만원 -> 원 단위 변환
+        const assets = [
+            (parseFloat(document.getElementById('asset1').value) || 0) * 10000,
+            (parseFloat(document.getElementById('asset2').value) || 0) * 10000,
+            (parseFloat(document.getElementById('asset3').value) || 0) * 10000
+        ];
+        
+        const wType = document.querySelector('input[name="withdrawType"]:checked').value;
+        const rRate = (parseFloat(document.getElementById('annualReturn').value) || 0) / 100;
+        const dYield = (parseFloat(document.getElementById('dividendYield').value) || 0) / 100;
+        
+        const scenario = document.getElementById('scenarioType').value;
+        const mddDrop = (parseFloat(document.getElementById('mddDrop').value) || 0) / 100;
+        const vol = (parseFloat(document.getElementById('volatility').value) || 0) / 100;
+
+        const duration = endAge - startAge + 1;
+        if(duration <= 0) {
+            alert("종료 연령은 개시 연령보다 커야 합니다.");
+            return;
+        }
+
+        // 라벨 업데이트
+        document.getElementById('lblAsset1').innerText = (assets[0]/10000).toLocaleString() + "만";
+        document.getElementById('lblAsset2').innerText = (assets[1]/10000).toLocaleString() + "만";
+        document.getElementById('lblAsset3').innerText = (assets[2]/10000).toLocaleString() + "만";
+
+        // MC 생존확률 배열
+        let mcSurvivalRates = [0, 0, 0];
+
+        // 각 자산별 시뮬레이션
+        assets.forEach((initialAsset, index) => {
+            const dataId = index + 1;
+            globalSimulationData[dataId] = [];
+            
+            let currentAsset = initialAsset;
+            let fixedWithdrawal = 0;
+
+            // 초년도 인출금 세팅
+            if (wType === 'general') {
+                if (rRate === 0) {
+                    fixedWithdrawal = currentAsset / duration;
+                } else {
+                    fixedWithdrawal = currentAsset * (rRate / (1 - Math.pow(1 + rRate, -duration)));
+                }
+            }
+
+            // MC 처리 (확률만 구하고, 상세표는 일반 기대수익률로 표시)
+            if (scenario === 'mc') {
+                let survives = 0;
+                for(let i=0; i<1000; i++){
+                    let mcAsset = initialAsset;
+                    for(let year=0; year<duration; year++){
+                        let w = (wType === 'dividend') ? (mcAsset * dYield) : fixedWithdrawal;
+                        let ret = rRate + (vol * randn_bm());
+                        mcAsset = (mcAsset * (1 + ret)) - w;
+                        if(mcAsset <= 0) break;
+                        if(year === duration-1) survives++;
+                    }
+                }
+                mcSurvivalRates[index] = (survives / 10).toFixed(1) + "%";
+            }
+
+            // 연도별 상세 데이터 생성
+            for (let age = startAge; age <= endAge; age++) {
+                if (currentAsset <= 0) {
+                    // 고갈
+                    globalSimulationData[dataId].push({
+                        age: age, yearly: 0, monthly: 0, taxRate: '-', taxAmt: 0, remain: 0, isBomb: false
+                    });
+                    continue;
+                }
+
+                // 당해 인출금 계산
+                let yearlyWithdraw = 0;
+                if (wType === 'dividend') {
+                    yearlyWithdraw = initialAsset * dYield; // 원금 기준 목표 배당액 고정수령 (수량 유지 컨셉)
+                } else {
+                    yearlyWithdraw = fixedWithdrawal;
+                }
+
+                // 초과 인출 방지
+                if (yearlyWithdraw > currentAsset) yearlyWithdraw = currentAsset;
+
+                // 세금 계산 (1,500만 원 한도)
+                let isBomb = false;
+                let tRate = 0;
+                if (yearlyWithdraw > 15000000) {
+                    tRate = 0.165;
+                    isBomb = true;
+                } else {
+                    if (age < 70) tRate = 0.055;
+                    else if (age < 80) tRate = 0.044;
+                    else tRate = 0.033;
+                }
+                let taxAmt = yearlyWithdraw * tRate;
+
+                // 잔여 자산 수익률 적용 후 인출 차감
+                let currentReturn = rRate;
+                if (scenario === 'mdd' && age === startAge) {
+                    currentReturn = -mddDrop; // 첫해 MDD 타격
+                }
+                
+                currentAsset = (currentAsset * (1 + currentReturn)) - yearlyWithdraw;
+                if (currentAsset < 0) currentAsset = 0;
+
+                globalSimulationData[dataId].push({
+                    age: age,
+                    yearly: yearlyWithdraw,
+                    monthly: yearlyWithdraw / 12,
+                    taxRate: (tRate * 100).toFixed(1) + "%",
+                    taxAmt: taxAmt,
+                    remain: currentAsset,
+                    isBomb: isBomb
+                });
+            }
+
+            // 요약 카드 업데이트 (초년도 기준)
+            const firstYear = globalSimulationData[dataId][0];
+            const sumAmtEl = document.getElementById(`sumAmt${dataId}`);
+            const sumTaxEl = document.getElementById(`sumTax${dataId}`);
+            
+            sumAmtEl.innerText = formatMoney(firstYear.yearly / 10000) + "만";
+            if (firstYear.isBomb) {
+                sumAmtEl.className = "summary-val warning";
+                sumTaxEl.innerHTML = `<span class="warning">16.5% (폭탄)</span>`;
+            } else {
+                sumAmtEl.className = "summary-val";
+                sumTaxEl.innerText = `${firstYear.taxRate} 정상`;
+            }
+        });
+
+        // 몬테카를로 UI 표시
+        const mcDiv = document.getElementById('mcSurvivalDiv');
+        if (scenario === 'mc') {
+            mcDiv.style.display = 'block';
+            document.getElementById('mcSurv1').innerText = mcSurvivalRates[0];
+            document.getElementById('mcSurv2').innerText = mcSurvivalRates[1];
+            document.getElementById('mcSurv3').innerText = mcSurvivalRates[2];
+        } else {
+            mcDiv.style.display = 'none';
+        }
+
+        // 결과 영역 표시 및 1번 탭 기본 렌더
+        document.getElementById('resultArea').style.display = 'block';
+        showTab(1);
+    }
+
+    // 상세 탭 변경 함수
+    function showTab(id) {
+        // 탭 버튼 스타일
+        for(let i=1; i<=3; i++){
+            document.getElementById(`tabBtn${i}`).classList.remove('active');
+        }
+        document.getElementById(`tabBtn${id}`).classList.add('active');
+
+        // 테이블 렌더링
+        const tbody = document.getElementById('detailTbody');
+        tbody.innerHTML = '';
+
+        const data = globalSimulationData[id];
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            if (row.isBomb) tr.classList.add('tax-bomb');
+            
+            if (row.yearly === 0 && row.remain === 0) {
+                tr.innerHTML = `
+                    <td>${row.age}세</td>
+                    <td colspan="5" style="text-align:center; color:#999;">자산 고갈</td>
+                `;
+            } else {
+                tr.innerHTML = `
+                    <td>${row.age}세</td>
+                    <td>${formatMoney(row.monthly / 10000)}만</td>
+                    <td>${formatMoney(row.yearly / 10000)}만</td>
+                    <td>${row.taxRate}</td>
+                    <td>${formatMoney(row.taxAmt / 10000)}만</td>
+                    <td>${formatMoney(row.remain / 10000)}만</td>
+                `;
+            }
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 초기 로딩 시 입력 필드 트리거
+    window.onload = () => {
+        toggleDivYield();
+        toggleScenarioInputs();
+    };
+</script>
+</body>
+</html>
