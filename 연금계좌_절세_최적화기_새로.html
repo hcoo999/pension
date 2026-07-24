@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>연금계좌 절세 최적화기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700;900&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --ink:#12203A; --ink-2:#1c3050; --paper:#FAF7EF; --line:#e4ddc9;
+    --seal:#a83a2c; --seal-2:#8f2f22; --gold:#b6913c;
+    --acc:#2f4b7c; --acc-tint:#e7ecf5;
+    --free:#3c6e47; --free-tint:#e6efe7;
+    --soft:#5a6478;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; background:var(--paper); color:var(--ink); font-family:'Noto Sans KR',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  body{padding-bottom:88px;}
+
+  header.hero{
+    background:linear-gradient(160deg,var(--ink) 0%, var(--ink-2) 65%, #223a5e 100%);
+    color:#f3f0e6; padding:34px 18px 28px; position:relative; overflow:hidden;
+  }
+  header.hero::after{
+    content:""; position:absolute; inset:0;
+    background-image:repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 22px);
+  }
+  .hero-inner{position:relative; max-width:640px; margin:0 auto;}
+  .eyebrow{
+    font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.16em; color:#c9b988;
+    text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px;
+  }
+  .eyebrow::before{content:""; width:20px; height:1px; background:#c9b988;}
+  h1{font-family:'Noto Serif KR'; font-weight:900; font-size:23px; margin:0 0 10px; letter-spacing:-.01em;}
+  .hero-sub{font-size:13.5px; color:#d7d2c2; margin:0 0 12px;}
+  .goal-chip{
+    display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-family:'IBM Plex Mono';
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:20px;
+    padding:5px 12px; color:#f0e9d2;
+  }
+
+  main{max-width:640px; margin:0 auto; padding:20px 14px 10px;}
+
+  .register-head{
+    display:flex; align-items:center; gap:10px; border-bottom:2px solid var(--ink);
+    padding-bottom:8px; margin:26px 0 14px;
+  }
+  .register-head .num{
+    font-family:'Noto Serif KR'; font-weight:900; font-size:11px; color:var(--seal);
+    border:1px solid var(--seal); border-radius:2px; padding:2px 6px;
+  }
+  .register-head h2{font-family:'Noto Serif KR'; font-size:17px; margin:0; font-weight:700;}
+
+  .card{background:#fff; border:1px solid var(--line); border-radius:8px; margin-bottom:14px;}
+  .acct-card{padding:16px; border-left:3px solid var(--gold);}
+  .acct-card .acct-name{font-family:'Noto Serif KR'; font-weight:700; font-size:14.5px; margin-bottom:2px;}
+  .acct-card .acct-desc{font-size:11.5px; color:var(--soft); margin-bottom:14px;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--soft); margin-bottom:5px; font-weight:500;}
+  .field .hint{font-size:11px; color:#93927f; margin-top:4px;}
+  input[type=number]{
+    width:100%; padding:12px 12px; border:1px solid #d8d2bf; border-radius:6px;
+    font-size:16px; font-family:'IBM Plex Mono',monospace; background:#fdfcf7; color:var(--ink);
+  }
+  input[type=number]:focus{outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(182,145,60,.15);}
+  .unit-wrap{position:relative;}
+  .unit-wrap .unit{position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:12px; color:#93927f;}
+
+  .fixed-note{
+    display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--soft);
+    background:#f2efe4; border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:14px;
+  }
+  .shortcut-note{
+    font-size:12.5px; color:#1e5f34; background:#e9f4ec; border:1px solid #bfe0c9;
+    padding:11px 12px; border-radius:7px; margin-bottom:14px; line-height:1.6;
+  }
+
+  .btn-sticky-wrap{
+    position:fixed; left:0; right:0; bottom:0; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, var(--paper) 60%, rgba(250,247,239,0));
+    z-index:20;
+  }
+  .btn-compute{
+    width:100%; max-width:612px; margin:0 auto; display:block;
+    padding:15px; background:var(--seal); color:#fdf6ef; border:none; border-radius:8px;
+    font-size:15.5px; font-weight:700; cursor:pointer; box-shadow:0 4px 14px rgba(168,58,44,.28);
+  }
+  .btn-compute:active{background:var(--seal-2);}
+
+  .save-note{font-size:11px; color:#93927f; text-align:center; margin-top:8px;}
+
+  #result-area{display:none;}
+  #result-area.show{display:block;}
+  #capture-area{background:var(--paper); padding:2px;}
+
+  .warn{font-size:12px; background:#fdf1e8; color:#a15a1f; border:1px solid #f0d9c3; padding:9px 11px; border-radius:6px; margin-bottom:14px;}
+
+  .base-vs-opt{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px; margin-bottom:16px;}
+  .bv-box{border:1px solid var(--line); border-radius:8px; padding:12px; text-align:center; position:relative; cursor:pointer;}
+  .bv-box.opt{border-color:var(--gold); background:#fdfaf0;}
+  .bv-box.active{border-color:var(--seal); box-shadow:0 0 0 2px var(--seal);}
+  .bv-box .lab{font-size:10.5px; color:var(--soft); margin-bottom:4px;}
+  .bv-box .val{font-family:'IBM Plex Mono'; font-size:15px; font-weight:700;}
+  .bv-box .btn-view{display:inline-block; font-size:10px; background:var(--ink); color:#fff; padding:2px 6px; border-radius:4px; margin-top:6px;}
+  .bv-box.opt .btn-view{background:var(--gold);}
+  .bv-arrow{font-size:18px; color:var(--gold); text-align:center;}
+  .bv-save{
+    text-align:center; font-size:12.5px; color:var(--soft); margin-bottom:16px;
+  }
+  .bv-save b{color:#1e5f34;}
+
+  .strategy-card{border:1px solid var(--line); border-radius:8px; padding:14px; margin-bottom:10px; position:relative;}
+  .strategy-card.win{border-color:var(--gold); background:#fdfaf0;}
+  .strategy-card.active{border-color:var(--seal); box-shadow:0 0 0 2px var(--seal);}
+  .strategy-card .name{font-family:'Noto Serif KR'; font-weight:700; font-size:13.5px; margin-bottom:2px;}
+  .strategy-card .desc{font-size:11px; color:var(--soft); margin-bottom:8px;}
+  .strategy-card .badge{
+    position:absolute; top:12px; right:12px; font-size:10px; background:var(--gold); color:#fff;
+    padding:2px 8px; border-radius:10px; font-family:'IBM Plex Mono';
+  }
+  .strategy-card .btn-view-strat{
+    display:block; text-align:center; font-size:11.5px; background:#f2efe4; border:1px solid var(--line);
+    padding:6px; margin-top:10px; border-radius:4px; cursor:pointer; color:var(--ink); font-weight:500;
+  }
+  .strategy-card.active .btn-view-strat{background:var(--seal); color:#fff; border-color:var(--seal);}
+  .line-item{display:flex; justify-content:space-between; font-size:12.5px; padding:2.5px 0; color:var(--soft);}
+  .line-item.total{border-top:1px solid #eae4d2; margin-top:5px; padding-top:7px; font-weight:700; color:var(--ink); font-size:13.5px;}
+  .line-item .v{font-family:'IBM Plex Mono';}
+
+  .seal-area{display:flex; align-items:center; gap:16px; padding:14px 2px 4px;}
+  .seal{
+    width:76px; height:76px; border-radius:50%; border:3px solid var(--seal); flex-shrink:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--seal);
+    font-family:'Noto Serif KR'; transform:rotate(-8deg) scale(.6); opacity:0;
+    transition:transform .5s cubic-bezier(.34,1.56,.64,1), opacity .4s; position:relative;
+  }
+  .seal::before{content:""; position:absolute; inset:4px; border:1px solid var(--seal); border-radius:50%; opacity:.5;}
+  .seal.stamped{transform:rotate(-8deg) scale(1); opacity:1;}
+  .seal .seal-top{font-size:9.5px; font-weight:700;}
+  .seal .seal-mid{font-size:13px; font-weight:900; margin:1px 0;}
+  .seal .seal-bot{font-size:7.5px;}
+  .verdict .head{font-family:'Noto Serif KR'; font-weight:700; font-size:14.5px; margin-bottom:4px;}
+  .verdict .body{font-size:12.5px; color:var(--soft); line-height:1.6;}
+  .verdict .body b{color:var(--ink);}
+
+  .table-wrap{
+    border:1px solid var(--line); border-radius:8px; overflow:auto; max-height:380px; background:#fff;
+  }
+  table.tl{border-collapse:collapse; width:100%; font-size:11px;}
+  table.tl th, table.tl td{
+    padding:8px 8px; text-align:right; white-space:nowrap; font-family:'IBM Plex Mono';
+  }
+  table.tl th{
+    position:sticky; top:0; background:var(--ink); color:#fdf6ef; font-family:'Noto Sans KR'; font-size:10px; font-weight:500; z-index:2;
+  }
+  table.tl td:first-child, table.tl th:first-child{text-align:center;}
+  table.tl tbody tr:nth-child(even){background:#faf8f0;}
+  table.tl tr.sum-row{background:#eae4d2 !important; font-weight:700; color:var(--ink); border-top:2px solid var(--ink);}
+  table.tl tr.sum-row td{font-family:'IBM Plex Mono'; padding:10px 8px;}
+  table.tl td.method-sep{color:var(--acc);}
+  table.tl td.method-comp{color:var(--seal); font-weight:600;}
+  table.tl td.method-none{color:#b7b19a;}
+  table.tl td.ref{color:#b7b19a; font-size:10.5px;}
+
+  .rules-list{list-style:none; margin:0; padding:0; counter-reset:rule;}
+  .rules-list li{
+    counter-increment:rule; position:relative; padding:12px 12px 12px 42px; margin-bottom:8px;
+    background:#fff; border:1px solid var(--line); border-radius:7px; font-size:12.5px; line-height:1.6;
+  }
+  .rules-list li::before{
+    content:counter(rule); position:absolute; left:12px; top:12px;
+    width:20px; height:20px; border-radius:50%; background:var(--ink); color:#fdf6ef;
+    font-family:'IBM Plex Mono'; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:center;
+  }
+  .rules-list li b{color:var(--seal);}
+
+  .action-row{display:flex; gap:8px; margin:16px 0 8px;}
+  .btn-ghost{
+    flex:1; padding:12px; border:1px solid var(--ink); background:#fff; color:var(--ink);
+    border-radius:7px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .btn-ghost:active{background:#f2efe4;}
+
+  footer{max-width:640px; margin:24px auto 20px; padding:0 14px; font-size:10.5px; color:#a3a08c; line-height:1.7;}
+  footer .fline{border-top:1px solid var(--line); padding-top:14px;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">PENSION LEDGER · 정밀 세법 버전</div>
+    <h1>연금계좌 절세 최적화</h1>
+    <p class="hero-sub">연금계좌 원 단위 정밀 세액산출 및 연도별 합계 연산 기능 추가</p>
+    <div class="goal-chip">🎯 목표: 총 세금 최소화</div>
+  </div>
+</header>
+
+<main>
+  <div class="register-head"><span class="num">1번</span><h2>📌계좌별 세액공제분과 세액공제 안받은분(비과세)을 나눠 입력</h2></div>
+
+  <div class="card acct-card">
+    <div class="acct-name">연금계좌 1</div>
+    <div class="field">
+      <label>과세대상 잔액 <span class="mono">(세액공제 원금+운용수익)</span></label>
+      <div class="unit-wrap"><input type="number" id="w-a1-taxable" value="4000" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>세액공제 안받은 원금<span class="mono">(비과세)</span></label>
+      <div class="unit-wrap"><input type="number" id="w-a1-free" value="700" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+  </div>
+
+  <div class="card acct-card">
+    <div class="acct-name">연금계좌 2</div>
+    <div class="field">
+      <label>과세대상 잔액 <span class="mono">(세액공제 원금+운용수익)</span></label>
+      <div class="unit-wrap"><input type="number" id="w-a2-taxable" value="4000" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>세액공제 안받은 원금 <span class="mono">(비과세)</span></label>
+      <div class="unit-wrap"><input type="number" id="w-a2-free" value="700" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+  </div>
+
+  <div class="register-head"><span class="num">2번</span><h2>인출 조건</h2></div>
+
+  <div class="card acct-card" style="border-left:3px solid var(--gold);">
+    <div class="field">
+      <label>현재 나이</label>
+      <div class="unit-wrap"><input type="number" id="w-age" value="60" min="55" max="99" inputmode="numeric"><span class="unit">세</span></div>
+      <div class="hint">55~69세 5.5%, 70~79세 4.4%, 80세 이상 3.3% 분리과세 원천징수세율이 해마다 자동 적용됩니다.</div>
+    </div>
+    <div class="field">
+      <label>매년 인출 희망액 (은퇴 기간 동안 동일 가정)</label>
+      <div class="unit-wrap"><input type="number" id="w-request" value="2000" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>기타 종합소득금액 (선택, 매년 동일 가정)</label>
+      <div class="unit-wrap"><input type="number" id="w-other-income" value="0" min="0" inputmode="numeric"><span class="unit">만원</span></div>
+    </div>
+  </div>
+
+  <div class="fixed-note">📌 종합소득공제는 <b class="mono" style="color:var(--ink)">본인 기본공제 150만원</b>만 적용.</div>
+
+  <div id="result-area">
+    <div id="capture-area">
+      <div class="register-head"><span class="num">3번</span><h2>계산 결과</h2></div>
+
+      <div id="shortcut-box"></div>
+
+      <div class="card" style="padding:16px;">
+        <div id="w-warn"></div>
+
+        <div class="base-vs-opt">
+          <div class="bv-box" id="bv-box-base" onclick="switchView('prop')">
+            <div class="lab">기본 인출<br>(전략 없이 비율대로)</div>
+            <div class="val mono" id="base-tax">-</div>
+            <div class="btn-view">현황 보기</div>
+          </div>
+          <div class="bv-arrow">→</div>
+          <div class="bv-box opt" id="bv-box-opt" onclick="switchView('opt')">
+            <div class="lab">최적화 인출<br>(세금 최소화)</div>
+            <div class="val mono" id="opt-tax">-</div>
+            <div class="btn-view">현황 보기</div>
+          </div>
+        </div>
+        <div class="bv-save" id="bv-save"></div>
+
+        <div id="strategy-compare"></div>
+
+        <div class="seal-area">
+          <div class="seal" id="seal-mark">
+            <div class="seal-top">최적화</div>
+            <div class="seal-mid" id="seal-word">-</div>
+            <div class="seal-bot">TOTAL TAX</div>
+          </div>
+          <div class="verdict">
+            <div class="head" id="verdict-head">결과</div>
+            <div class="body" id="verdict-body"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="register-head"><span class="num">4번</span><h2>연도별 인출·세금 현황 <span id="table-subtitle" style="font-size:11px; color:var(--seal); font-weight:700;">(최적화 기준)</span></h2></div>
+      <div class="table-wrap">
+        <table class="tl">
+          <thead>
+            <tr>
+              <th>연차</th><th>나이</th><th>비과세<br>인출</th><th>과세대상<br>인출</th><th>적용<br>방식</th><th>실제<br>세금</th><th>분리세액<br>(참고)</th><th>종합세액<br>(참고)</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="register-head"><span class="num">제5관</span><h2>최적화 규칙 요약</h2></div>
+      <ul class="rules-list" id="rules-list"></ul>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-ghost" onclick="saveImage()">📷 결과 이미지로 저장</button>
+    </div>
+    <div class="save-note" id="save-note"></div>
+  </div>
+</main>
+
+<div class="btn-sticky-wrap">
+  <button class="btn-compute" onclick="runAll()">총 세금 최소화 계산하기</button>
+</div>
+
+<footer>
+  <div class="fline">
+    2024년 이후 세법 기준(연금소득공제표·종합소득세 누진세율·사적연금 분리과세 한도 1,500만원, 본인 기본공제 150만원)을 완벽하게 적용한 실무 연산 버전입니다.
+    실제 인출 시 부양가족 세액공제 유무 등에 따라 미세한 차이가 있을 수 있으므로 최종 신고 전 참고용 자료로 활용하십시오.
+  </div>
+</footer>
+
+<script>
+let globalSimResults = {}; 
+let optimalStrategyKey = 'free'; 
+
+function fmtWon(won){ return Math.round(won).toLocaleString('ko-KR') + '원'; }
+function fmtManWon(won){ return (Math.round(won/10000 * 100)/100).toLocaleString('ko-KR') + '만원'; }
+
+// 대한민국 소득세법 기준 정확한 연금소득공제 계산 (원 단위)
+function pensionDeductionWon(grossWon){
+  if(grossWon <= 3500000) return grossWon;
+  if(grossWon <= 7000000) return 3500000 + (grossWon - 3500000) * 0.4;
+  if(grossWon <= 14000000) return 4900000 + (grossWon - 7000000) * 0.2;
+  // 1,400만 원 초과인 경우 기본 630만 원 + 초과분 10%, 한도는 900만 원
+  return Math.min(6300000 + (grossWon - 14000000) * 0.1, 9000000);
+}
+
+// 종합소득세 누진세율 구간 정의 (원 단위)
+const bracketsWon = [
+  {limit: 14000000,   rate: 0.06, ded: 0},
+  {limit: 50000000,   rate: 0.15, ded: 1260000},
+  {limit: 88000000,   rate: 0.24, ded: 5760000},
+  {limit: 150000000,  rate: 0.35, ded: 15440000},
+  {limit: 300000000,  rate: 0.38, ded: 19940000},
+  {limit: 500000000,  rate: 0.40, ded: 25940000},
+  {limit: 1000000000, rate: 0.42, ded: 35940000},
+  {limit: Infinity,   rate: 0.45, ded: 65940000}
+];
+
+function incomeTaxExactWon(baseWon){
+  for(const b of bracketsWon){ 
+    if(baseWon <= b.limit) {
+      return Math.max(0, baseWon * b.rate - b.ded); 
+    } 
+  }
+  return 0;
+}
+
+function ageRateOf(age){ return age<70 ? 0.055 : (age<80 ? 0.044 : 0.033); }
+const BASIC_DEDUCTION_WON = 1500000; 
+
+// 원 단위 입력 기반 정밀 과세 함수 (소수점 원 단위 연산 오차 차단)
+function yearTaxExactWon(taxableWon, otherIncomeWon, age){
+  if(taxableWon <= 0) return {tax:0, method:'-', sep:0, comp:0, canChoose:true};
+  
+  const rate = ageRateOf(age);
+  const canChoose = taxableWon <= 15000000; // 1500만원 이하 저율 분리과세 여부
+  const sepTaxWon = Math.floor(taxableWon * rate);
+
+  // 종합과세 로직 원 단위 산출
+  const dedWon = Math.floor(pensionDeductionWon(taxableWon));
+  const pensionIncomeWon = Math.max(0, taxableWon - dedWon);
+  const baseWon = Math.max(0, pensionIncomeWon + otherIncomeWon - BASIC_DEDUCTION_WON);
+  const grossTaxWon = Math.floor(incomeTaxExactWon(baseWon));
+  
+  // 표준세액공제(7만원) 적용 및 지방소득세 10% 정밀 반영
+  const afterCreditWon = Math.max(0, grossTaxWon - 70000);
+  const compTaxWon = Math.floor(afterCreditWon * 1.1);
+
+  if(canChoose){
+    return sepTaxWon <= compTaxWon
+      ? {tax:sepTaxWon, method:'분리', sep:sepTaxWon, comp:compTaxWon, canChoose}
+      : {tax:compTaxWon, method:'종합', sep:sepTaxWon, comp:compTaxWon, canChoose};
+  }
+  return {tax:compTaxWon, method:'종합*', sep:sepTaxWon, comp:compTaxWon, canChoose};
+}
+
+function simulate(strategy, taxableInitMan, freeInitMan, age0, requestMan, otherIncomeMan){
+  // 정확성을 위해 시뮬레이터 내부 풀을 '원' 단위로 승격시켜 관리
+  let taxablePoolWon = taxableInitMan * 10000;
+  let freePoolWon = freeInitMan * 10000;
+  let requestWon = requestMan * 10000;
+  let otherIncomeWon = otherIncomeMan * 10000;
+  
+  let age = age0;
+  let totalTaxWon = 0, totalFreeWithdrawnWon = 0, totalTaxableWithdrawnWon = 0;
+  const rows = [];
+  let year = 0;
+  const MAX_YEARS = 60;
+
+  while(year<MAX_YEARS && requestWon>0 && (taxablePoolWon>1 || freePoolWon>1)){
+    let taxable_w_won = 0, free_w_won = 0;
+    
+    if(strategy==='free'){
+      free_w_won = Math.min(requestWon, freePoolWon);
+      taxable_w_won = Math.min(Math.max(0, requestWon - free_w_won), taxablePoolWon);
+    } else if(strategy==='cap'){
+      let targetTaxableWon = Math.min(15000000, requestWon, taxablePoolWon);
+      let remainRequestWon = requestWon - targetTaxableWon;
+      
+      let takenFreeWon = Math.min(remainRequestWon, freePoolWon);
+      remainRequestWon -= takenFreeWon;
+      
+      let extraTaxableWon = 0;
+      if(remainRequestWon > 0) {
+        extraTaxableWon = Math.min(remainRequestWon, taxablePoolWon - targetTaxableWon);
+      }
+      
+      taxable_w_won = targetTaxableWon + extraTaxableWon;
+      free_w_won = takenFreeWon;
+    } else { 
+      const totalPoolWon = taxablePoolWon + freePoolWon;
+      if(totalPoolWon<=0) break;
+      const wantTaxableWon = requestWon * (taxablePoolWon / totalPoolWon);
+      taxable_w_won = Math.min(wantTaxableWon, taxablePoolWon, requestWon);
+      free_w_won = Math.min(requestWon - taxable_w_won, freePoolWon);
+    }
+    
+    if(taxable_w_won<=1 && free_w_won<=1) break;
+
+    const yt = yearTaxExactWon(taxable_w_won, otherIncomeWon, age);
+    taxablePoolWon -= taxable_w_won;
+    freePoolWon -= free_w_won;
+    totalTaxWon += yt.tax;
+    totalFreeWithdrawnWon += free_w_won;
+    totalTaxableWithdrawnWon += taxable_w_won;
+
+    rows.push({
+      year:year+1, age, freeWon: free_w_won, taxableWon: taxable_w_won,
+      method: yt.method, tax:yt.tax, sep:yt.sep, comp:yt.comp
+    });
+
+    age++; year++;
+  }
+  return {rows, totalTaxWon, totalFreeWithdrawnWon, totalTaxableWithdrawnWon, years:year};
+}
+
+function getInputs(){
+  return {
+    taxablePool: (parseFloat(document.getElementById('w-a1-taxable').value)||0) + (parseFloat(document.getElementById('w-a2-taxable').value)||0),
+    freePool: (parseFloat(document.getElementById('w-a1-free').value)||0) + (parseFloat(document.getElementById('w-a2-free').value)||0),
+    age: parseFloat(document.getElementById('w-age').value)||60,
+    request: parseFloat(document.getElementById('w-request').value)||0,
+    otherIncome: parseFloat(document.getElementById('w-other-income').value)||0,
+  };
+}
+
+// 데이터 테이블 렌더링 및 하단 합계 행 추가 함수
+function renderTable(res){
+  const body = document.getElementById('table-body');
+  body.innerHTML = '';
+  
+  // 연도별 데이터 행 생성
+  res.rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    const mCls = r.method==='분리' ? 'method-sep' : (r.method==='-' ? 'method-none' : 'method-comp');
+    tr.innerHTML = `
+      <td>${r.year}</td>
+      <td>${r.age}</td>
+      <td>${fmtManWon(r.freeWon)}</td>
+      <td>${fmtManWon(r.taxableWon)}</td>
+      <td class="${mCls}">${r.method}</td>
+      <td>${fmtWon(r.tax)}</td>
+      <td class="ref">${fmtWon(r.sep)}</td>
+      <td class="ref">${fmtWon(r.comp)}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  // 테이블 맨 하단에 '합계' 행 생성 및 추가
+  const sumTr = document.createElement('tr');
+  sumTr.className = 'sum-row';
+  sumTr.innerHTML = `
+    <td>합계</td>
+    <td>${res.years}개년</td>
+    <td>${fmtManWon(res.totalFreeWithdrawnWon)}</td>
+    <td>${fmtManWon(res.totalTaxableWithdrawnWon)}</td>
+    <td style="text-align:center; font-family:'Noto Sans KR'; font-size:10px;">누적합산</td>
+    <td>${fmtWon(res.totalTaxWon)}</td>
+    <td class="ref">-</td>
+    <td class="ref">-</td>
+  `;
+  body.appendChild(sumTr);
+}
+
+function switchView(stratKey) {
+  let targetKey = stratKey;
+  if(stratKey === 'opt') {
+    targetKey = optimalStrategyKey;
+  }
+  
+  const res = globalSimResults[targetKey];
+  if(!res) return;
+  
+  renderTable(res);
+  
+  const sub = document.getElementById('table-subtitle');
+  document.getElementById('bv-box-base').classList.remove('active');
+  document.getElementById('bv-box-opt').classList.remove('active');
+  
+  const cardFree = document.getElementById('card-free');
+  const cardCap = document.getElementById('card-cap');
+  if(cardFree) cardFree.classList.remove('active');
+  if(cardCap) cardCap.classList.remove('active');
+
+  if(stratKey === 'prop') {
+    sub.textContent = '(기본 인출 기준 현황)';
+    document.getElementById('bv-box-base').classList.add('active');
+  } else if(stratKey === 'free') {
+    sub.textContent = '(비과세 우선 인출 기준 현황)';
+    if(cardFree) cardFree.classList.add('active');
+  } else if(stratKey === 'cap') {
+    sub.textContent = '(과세한도 우선 인출 기준 현황)';
+    if(cardCap) cardCap.classList.add('active');
+  } else if(stratKey === 'opt') {
+    sub.textContent = '(최적화 절세 기준 현황)';
+    document.getElementById('bv-box-opt').classList.add('active');
+    const optCard = document.getElementById('card-' + optimalStrategyKey);
+    if(optCard) optCard.classList.add('active');
+  }
+}
+
+function renderRules(inp, opt, base, mode, extra){
+  const list = document.getElementById('rules-list');
+  list.innerHTML = '';
+  const rules = [];
+
+  rules.push(`이 계산기의 목표는 절세 방법의 우열을 나열하는 게 아니라, <b>은퇴 기간 전체에서 낼 세금의 합계를 가장 적게 만드는 것</b>입니다. 매년 분리과세·종합과세 중 더 저렴한 쪽을 자동으로 선택해 반영했습니다.`);
+
+  if(mode==='direct'){
+    rules.push(`매년 인출액이 <b>1,500만원 이하</b>라 두 계좌 어떻게 나눠 받아도 과세대상 인출액이 이 한도를 넘을 일이 없습니다. 이런 경우엔 복잡한 전략 비교 없이 <b>비과세 잔액부터 채우는 것이 곧 최선</b>입니다 — 비과세 인출은 항상 세금이 0원이기 때문입니다.`);
+  } else {
+    const capWon = extra.capTax, freeWon = extra.freeTax;
+    const capWins = capWon <= freeWon;
+    rules.push(capWins
+      ? `매년 인출액이 1,500만원을 넘는 상황에서는, <b>비과세부터 무작정 쓰기보다 과세대상을 매년 1,500만원 한도까지 채우고 초과분만 비과세로 충당</b>하는 편이 전체 기간 세금을 <b>${fmtWon(Math.abs(capWon-freeWon))}</b> 더 아꼈습니다. 비과세 잔액을 아껴 두어야 나중에 과세대상만 남는 해에 한도를 넘기지 않기 때문입니다.`
+      : `이번 조건에서는 비과세를 먼저 쓰는 편이 전체 기간 세금을 <b>${fmtWon(Math.abs(capWon-freeWon))}</b> 더 아꼈습니다. 과세대상 잔액이 넉넉해 나중에도 1,500만원 한도를 넘길 위험이 적기 때문입니다.`);
+  }
+
+  const savedByOpt = base.totalTaxWon - opt.totalTaxWon;
+  if(savedByOpt>1){
+    rules.push(`전략 없이 잔액 비율대로 인출했을 때보다, 최적화 인출은 전체 기간 세금을 <b>${fmtWon(savedByOpt)}</b> 줄였습니다.`);
+  }
+
+  rules.push(`연금공제 한도 한계령(900만원), 본인 기본공제(150만원), 표준세액공제(7만원) 연산 로직이 원 단위로 완벽하게 보정되었습니다.`);
+
+  rules.forEach(text=>{
+    const li = document.createElement('li');
+    li.innerHTML = text;
+    list.appendChild(li);
+  });
+}
+
+function runAll(){
+  const inp = getInputs();
+  const warnBox = document.getElementById('w-warn');
+  warnBox.innerHTML = '';
+  document.getElementById('shortcut-box').innerHTML = '';
+  document.getElementById('strategy-compare').innerHTML = '';
+
+  if(inp.request<=0){
+    warnBox.innerHTML = `<div class="warn">⚠ 매년 인출 희망액을 입력해주세요.</div>`;
+    return;
+  }
+
+  const base = simulate('prop', inp.taxablePool, inp.freePool, inp.age, inp.request, inp.otherIncome);
+  globalSimResults['prop'] = base;
+
+  let opt, mode, extra = {};
+  if(inp.request<=1500){
+    opt = simulate('free', inp.taxablePool, inp.freePool, inp.age, inp.request, inp.otherIncome);
+    optimalStrategyKey = 'free';
+    globalSimResults['free'] = opt;
+    mode = 'direct';
+    document.getElementById('shortcut-box').innerHTML =
+      `<div class="shortcut-note">✅ 매년 인출액이 <b>1,500만원 이하</b>라 별도 전략 비교 없이 바로 최적화 안내를 제공합니다. 비과세 잔액부터 채우는 것이 이 조건에서는 언제나 최선입니다. 상단의 현황 보기 버튼을 클릭해 각 전략의 상세 수치를 교차 검증할 수 있습니다.</div>`;
+  } else {
+    const freeStrat = simulate('free', inp.taxablePool, inp.freePool, inp.age, inp.request, inp.otherIncome);
+    const capStrat  = simulate('cap',  inp.taxablePool, inp.freePool, inp.age, inp.request, inp.otherIncome);
+    
+    globalSimResults['free'] = freeStrat;
+    globalSimResults['cap'] = capStrat;
+    
+    extra = {freeTax:freeStrat.totalTaxWon, capTax:capStrat.totalTaxWon};
+    const capWins = capStrat.totalTaxWon <= freeStrat.totalTaxWon;
+    
+    opt = capWins ? capStrat : freeStrat;
+    optimalStrategyKey = capWins ? 'cap' : 'free';
+    mode = 'compare';
+
+    const compareHtml = `
+      <div class="strategy-card ${!capWins?'win':''}" id="card-free">
+        <div class="name">비과세 먼저 인출</div>
+        <div class="desc">매년 비과세 잔액부터 채우고 부족분만 과세대상에서 인출</div>
+        <div class="line-item"><span>인출 가능 기간</span><span class="v">${freeStrat.years}년</span></div>
+        <div class="line-item total"><span>전체 기간 총 세금</span><span class="v">${fmtWon(freeStrat.totalTaxWon)}</span></div>
+        ${!capWins?'<div class="badge">추천</div>':''}
+        <div class="btn-view-strat" onclick="switchView('free')">📊 이 전략의 연도별 현황 테이블로 변경</div>
+      </div>
+      <div class="strategy-card ${capWins?'win':''}" id="card-cap">
+        <div class="name">과세한도(1,500만원) 우선 활용</div>
+        <div class="desc">매년 과세대상을 1,500만원까지 채우고 초과분만 비과세로 충당 (비과세 부족 시 전액 인출 보장)</div>
+        <div class="line-item"><span>인출 가능 기간</span><span class="v">${capStrat.years}년</span></div>
+        <div class="line-item total"><span>전체 기간 총 세금</span><span class="v">${fmtWon(capStrat.totalTaxWon)}</span></div>
+        ${capWins?'<div class="badge">추천</div>':''}
+        <div class="btn-view-strat" onclick="switchView('cap')">📊 이 전략의 연도별 현황 테이블로 변경</div>
+      </div>
+    `;
+    document.getElementById('strategy-compare').innerHTML = compareHtml;
+  }
+
+  document.getElementById('base-tax').textContent = fmtWon(base.totalTaxWon);
+  document.getElementById('opt-tax').textContent = fmtWon(opt.totalTaxWon);
+  const saved = Math.max(0, base.totalTaxWon - opt.totalTaxWon);
+  document.getElementById('bv-save').innerHTML = saved>1
+    ? `기본 대비 <b>${fmtWon(saved)}</b> 절약`
+    : `기본 인출과 최적화 결과가 동일합니다`;
+
+  const sealMark = document.getElementById('seal-mark');
+  sealMark.classList.remove('stamped');
+  void sealMark.offsetWidth;
+  document.getElementById('seal-word').textContent = fmtWon(opt.totalTaxWon).replace('원','');
+  document.getElementById('verdict-head').textContent = mode==='direct' ? '이미 최선의 인출 조건입니다' : '최적화 인출 전략';
+  document.getElementById('verdict-body').innerHTML =
+    `전체 ${opt.years}년 인출 기준, 최적화 총 세금은 <b>${fmtWon(opt.totalTaxWon)}</b>입니다. 상단 상자나 카드의 버튼을 눌러 연도별 인출 상세 수치를 변환하여 비교할 수 있습니다.`;
+
+  switchView('opt');
+  renderRules(inp, opt, base, mode, extra);
+
+  document.getElementById('result-area').classList.add('show');
+  requestAnimationFrame(()=> sealMark.classList.add('stamped'));
+  document.getElementById('result-area').scrollIntoView({behavior:'smooth', block:'start'});
+
+  saveInputs();
+}
+
+function saveImage(){
+  const note = document.getElementById('save-note');
+  note.textContent = '이미지 생성 중...';
+  html2canvas(document.getElementById('capture-area'), {backgroundColor:'#FAF7EF', scale:2}).then(canvas=>{
+    const link = document.createElement('a');
+    link.download = '연금절세_결과_' + new Date().toISOString().slice(0,10) + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    note.textContent = '이미지가 저장되었습니다.';
+    setTimeout(()=>{ note.textContent=''; }, 3000);
+  }).catch(()=>{
+    note.textContent = '이미지 생성에 실패했습니다. 다시 시도해주세요.';
+  });
+}
+
+const STORE_KEY = 'pension-optimizer-inputs-v4';
+const FIELD_IDS = ['w-a1-taxable','w-a1-free','w-a2-taxable','w-a2-free','w-age','w-request','w-other-income'];
+
+async function saveInputs(){
+  const data = {};
+  FIELD_IDS.forEach(id=> data[id] = document.getElementById(id).value);
+  try{
+    if(window.storage){ await window.storage.set(STORE_KEY, JSON.stringify(data), false); }
+  }catch(e){ }
+}
+
+async function loadInputs(){
+  try{
+    if(!window.storage) return;
+    const res = await window.storage.get(STORE_KEY, false);
+    if(res && res.value){
+      const d = JSON.parse(res.value);
+      FIELD_IDS.forEach(id=>{ if(d[id]!==undefined) document.getElementById(id).value = d[id]; });
+    }
+  }catch(e){ }
+}
+
+FIELD_IDS.forEach(id=>{
+  document.getElementById(id).addEventListener('change', saveInputs);
+});
+
+loadInputs();
+</script>
+
+</body>
+</html>

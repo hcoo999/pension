@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>분배금 계좌 배분 시뮬레이터</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --paper:#EEF1EF;
+    --ledger-line:#C7CDC8;
+    --ink:#17233A;
+    --ink-soft:#425066;
+    --pension:#1F6F63;
+    --pension-soft:#DCEBE7;
+    --general:#B9782C;
+    --general-soft:#F4E6D2;
+    --danger:#A3402F;
+    --paper-card:#F7F8F6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans KR',sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px;}
+  header{margin-bottom:22px;border-bottom:2px solid var(--ink);padding-bottom:16px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:6px;
+  }
+  h1{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:26px;
+    margin:0 0 6px;
+  }
+  .sub{color:var(--ink-soft);font-size:13.5px;max-width:640px;}
+
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;margin-top:24px;}
+  @media (max-width:820px){.grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:var(--paper-card);
+    border:1px solid var(--ledger-line);
+    border-radius:2px;
+    padding:20px;
+  }
+  .panel h2{
+    font-family:'Noto Serif KR',serif;
+    font-size:15px;margin:0 0 16px;
+    padding-bottom:8px;border-bottom:1px solid var(--ledger-line);
+  }
+  .field{margin-bottom:20px;}
+  .field label{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;font-weight:500;margin-bottom:6px;
+  }
+  .field label .val{
+    font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--ink);
+    background:#fff;border:1px solid var(--ledger-line);
+    padding:1px 7px;border-radius:2px;font-size:12.5px;
+  }
+  input[type=range]{
+    width:100%;accent-color:var(--pension);height:4px;
+  }
+  .amt-input{
+    display:flex;align-items:center;gap:6px;border:1px solid var(--ledger-line);
+    background:#fff;border-radius:2px;padding:4px 8px;margin-bottom:8px;
+  }
+  .amt-input input[type=number]{
+    flex:1;border:none;outline:none;font-family:'JetBrains Mono',monospace;
+    font-size:15px;font-weight:600;width:100%;background:transparent;color:var(--ink);
+  }
+  .amt-input span{font-size:12.5px;color:var(--ink-soft);}
+  .readonly-ratio{
+    display:flex;justify-content:space-between;align-items:center;
+    background:var(--pension-soft);border:1px dashed var(--pension);
+    border-radius:2px;padding:8px 10px;font-size:13px;margin-top:6px;
+  }
+  .readonly-ratio .val{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--pension);}
+  .scenario-tag{
+    display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;
+  }
+  .scenario-tag button{
+    font-family:'Noto Sans KR',sans-serif;
+    font-size:11.5px;padding:4px 9px;
+    border:1px solid var(--ledger-line);background:#fff;
+    border-radius:20px;cursor:pointer;color:var(--ink-soft);
+  }
+  .scenario-tag button:hover{border-color:var(--general);color:var(--general);}
+  .toggle-row{display:flex;gap:8px;}
+  .toggle-row button{
+    flex:1;padding:8px 6px;font-size:12.5px;border-radius:2px;
+    border:1px solid var(--ledger-line);background:#fff;color:var(--ink-soft);
+    cursor:pointer;font-family:'Noto Sans KR',sans-serif;
+  }
+  .toggle-row button.active{
+    background:var(--ink);color:#fff;border-color:var(--ink);
+  }
+  select{
+    width:100%;padding:8px;border:1px solid var(--ledger-line);
+    border-radius:2px;background:#fff;font-family:'Noto Sans KR',sans-serif;font-size:13px;
+  }
+  .note{font-size:11.5px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+
+  .results{display:flex;flex-direction:column;gap:18px;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--ledger-line);border:1px solid var(--ledger-line);}
+  @media (max-width:640px){.cards{grid-template-columns:repeat(2,1fr);}}
+  .card{background:var(--paper-card);padding:14px 14px;}
+  .card .lbl{font-size:11px;color:var(--ink-soft);margin-bottom:6px;letter-spacing:.03em;}
+  .card .num{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:600;}
+  .card.total .num{color:var(--ink);}
+  .card.rate .num{color:var(--danger);}
+
+  .ledger{
+    background:var(--paper-card);border:1px solid var(--ledger-line);padding:18px 20px;
+  }
+  .ledger h3{font-family:'Noto Serif KR',serif;font-size:14.5px;margin:0 0 14px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  table th{
+    text-align:right;font-weight:500;color:var(--ink-soft);
+    font-size:11px;padding:5px 6px;border-bottom:1px solid var(--ink);
+    font-family:'JetBrains Mono',monospace;letter-spacing:.03em;
+  }
+  table th:first-child{text-align:left;}
+  table td{
+    text-align:right;padding:7px 6px;border-bottom:1px dashed var(--ledger-line);
+    font-family:'JetBrains Mono',monospace;
+  }
+  table td:first-child{text-align:left;font-family:'Noto Sans KR',sans-serif;}
+  table tr.sum td{border-top:2px solid var(--ink);border-bottom:none;font-weight:700;padding-top:9px;}
+  .pill{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:middle;}
+
+  .chart-box{background:var(--paper-card);border:1px solid var(--ledger-line);padding:18px 20px;}
+  .chart-box h3{font-family:'Noto Serif KR',serif;font-size:14.5px;margin:0 0 4px;}
+  .chart-box .desc{font-size:12px;color:var(--ink-soft);margin-bottom:12px;}
+  .canvas-wrap{position:relative;height:280px;width:100%;}
+  .canvas-wrap canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important;}
+
+  footer{margin-top:26px;font-size:11.5px;color:var(--ink-soft);border-top:1px solid var(--ledger-line);padding-top:12px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">분배금 · 계좌 배분 시뮬레이터</div>
+    <h1>연금저축 vs 일반계좌(국내형 커버드콜) 배분 계산기</h1>
+    <div class="sub">변수를 조정하면서 연간 분배금을 두 계좌에 배분했을 때 세금·건강보험료·세후 실수령액이 어떻게 달라지는지 확인해보세요. 모든 수치는 개략치이며 실제 신고 시 세무사 확인이 필요합니다.</div>
+  </header>
+
+  <div class="grid">
+    <!-- CONTROLS -->
+    <div class="panel">
+      <h2>01 · 변수 설정</h2>
+
+      <div class="field">
+        <label>연간 총 분배금</label>
+        <div class="amt-input">
+          <input type="number" id="totalAmtInput" min="2000" max="20000" step="10" value="8000">
+          <span>만원</span>
+        </div>
+        <input type="range" id="totalAmt" min="2000" max="20000" step="10" value="8000">
+      </div>
+
+      <div class="field">
+        <label>일반계좌 배당 비중 <span class="val" id="v-divratio">12%</span></label>
+        <input type="range" id="dividendRatio" min="2" max="50" step="1" value="12">
+        <div class="scenario-tag">
+          <button data-set="2">호황(2%)</button>
+          <button data-set="12">중립(12%)</button>
+          <button data-set="30">보수(30%)</button>
+          <button data-set="50">배당비중 최대(50%)</button>
+        </div>
+        <div class="note">분배금 중 배당소득세 15.4%가 부과되는 비중(나머지는 옵션프리미엄 비과세분). 시장 변동성이 낮을수록 이 비율이 낮아집니다.</div>
+      </div>
+
+      <div class="field">
+        <label>일반계좌 배분 비율 <span class="val" id="v-ratio">60%</span></label>
+        <input type="range" id="generalRatio" min="0" max="100" step="5" value="60">
+        <div class="readonly-ratio">
+          <span>연금저축/IRP 배분 비율(자동)</span>
+          <span class="val" id="v-pension-ratio">40%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>건강보험 가입 유형</label>
+        <div class="toggle-row">
+          <button id="btn-region" class="active">지역가입자</button>
+          <button id="btn-workplace">직장가입자</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>연금저축 저율과세 연령 구간</label>
+        <select id="ageRate">
+          <option value="0.055">55~69세 (5.5%)</option>
+          <option value="0.044">70~79세 (4.4%)</option>
+          <option value="0.033">80세 이상 (3.3%)</option>
+        </select>
+        <div class="note">연금저축 배분액이 1,500만원 이하일 때만 적용. 초과 시 전액 16.5% 분리과세로 계산됩니다.</div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results">
+      <div class="cards">
+        <div class="card"><div class="lbl">세전 총 분배금</div><div class="num" id="c-total">-</div></div>
+        <div class="card"><div class="lbl">세금+건보료 합계</div><div class="num" id="c-burden">-</div></div>
+        <div class="card total"><div class="lbl">세후 실수령(연)</div><div class="num" id="c-net">-</div></div>
+        <div class="card rate"><div class="lbl">전체 실효부담률</div><div class="num" id="c-rate">-</div></div>
+      </div>
+
+      <div class="ledger">
+        <h3>계좌별 상세 내역</h3>
+        <table>
+          <thead>
+            <tr><th>구분</th><th>배분액</th><th>과세대상</th><th>세금</th><th>건보료</th><th>세후 실수령</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill" style="background:var(--pension)"></span>연금저축/IRP</td>
+              <td id="p-alloc">-</td><td id="p-taxable">-</td><td id="p-tax">-</td><td id="p-health">-</td><td id="p-net">-</td>
+            </tr>
+            <tr>
+              <td><span class="pill" style="background:var(--general)"></span>일반계좌(커버드콜)</td>
+              <td id="g-alloc">-</td><td id="g-taxable">-</td><td id="g-tax">-</td><td id="g-health">-</td><td id="g-net">-</td>
+            </tr>
+            <tr class="sum">
+              <td>합계</td><td id="s-alloc">-</td><td>-</td><td id="s-tax">-</td><td id="s-health">-</td><td id="s-net">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chart-box">
+        <h3>계좌별 세전 → 세후 분해</h3>
+        <div class="desc">각 계좌에서 세금과 건보료가 얼마나 깎이는지 막대로 비교합니다.</div>
+        <div class="canvas-wrap"><canvas id="breakdownChart"></canvas></div>
+      </div>
+
+      <div class="chart-box">
+        <h3>시장 상황(배당 비중)에 따른 민감도</h3>
+        <div class="desc">일반계좌의 배당 비중이 변할 때, 일반계좌 배분 비율별로 전체 세후 실수령이 어떻게 움직이는지 보여줍니다. 현재 설정은 점으로 표시됩니다.</div>
+        <div class="canvas-wrap"><canvas id="sensitivityChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    가정: 다른 금융소득 없음 · 국내주가지수 커버드콜 옵션프리미엄 비과세(소득세법 시행령 26조의2) 적용 · 사적연금소득 완전제외(지역) 반영 · 건보료율 7.09%+장기요양 12.95% 근사치 · 종합소득세 2024년 누진구간 기준. 실제 수치는 개인 상황에 따라 달라지므로 세무사 확인이 필요합니다.
+  </footer>
+</div>
+
+<script>
+// ---------- state ----------
+let state = {
+  total: 8000, // 만원
+  generalRatio: 60, // 일반계좌 배분 비율(%), 연금저축은 100-generalRatio
+  dividendRatio: 12,
+  subscriber: 'region',
+  ageRate: 0.055
+};
+
+const fmt = n => Math.round(n).toLocaleString('ko-KR') + '만원';
+const fmtPct = n => n.toFixed(1) + '%';
+
+function bracketTax(manwonAmount){
+  const won = manwonAmount * 10000;
+  const brackets = [
+    [1400*10000, 0.066],
+    [5000*10000, 0.165],
+    [8800*10000, 0.264],
+    [15000*10000, 0.385],
+    [30000*10000, 0.418],
+    [50000*10000, 0.44],
+    [Infinity, 0.495]
+  ];
+  let tax = 0, prev = 0;
+  for(const [cap, rate] of brackets){
+    if(won > prev){
+      const slice = Math.min(won, cap) - prev;
+      tax += slice * rate;
+      prev = cap;
+    }
+  }
+  return tax / 10000;
+}
+
+function calcPension(alloc, ageRate){
+  let tax;
+  if(alloc <= 1500){
+    tax = alloc * ageRate;
+  } else {
+    tax = alloc * 0.165;
+  }
+  return { alloc, taxable: alloc, tax, health: 0, net: alloc - tax };
+}
+
+function calcGeneral(alloc, dividendRatioPct, subscriber){
+  const dividendPortion = alloc * dividendRatioPct / 100;
+  let tax;
+  if(dividendPortion <= 2000){
+    tax = dividendPortion * 0.154;
+  } else {
+    tax = bracketTax(dividendPortion);
+  }
+  let health = 0;
+  if(subscriber === 'region'){
+    if(dividendPortion > 1000){
+      health = dividendPortion * 0.0709 * 1.1295;
+    }
+  } else {
+    if(dividendPortion > 2000){
+      health = (dividendPortion - 2000) * 0.0709 * 1.1295;
+    }
+  }
+  return { alloc, taxable: dividendPortion, tax, health, net: alloc - tax - health };
+}
+
+function computeAll(total, generalRatio, dividendRatio, subscriber, ageRate){
+  const generalAlloc = total * generalRatio / 100;
+  const pensionAlloc = total - generalAlloc;
+  const p = calcPension(pensionAlloc, ageRate);
+  const g = calcGeneral(generalAlloc, dividendRatio, subscriber);
+  const totalTax = p.tax + g.tax;
+  const totalHealth = p.health + g.health;
+  const totalNet = p.net + g.net;
+  return { p, g, totalTax, totalHealth, totalNet, burden: totalTax+totalHealth, rate: (totalTax+totalHealth)/total*100 };
+}
+
+// ---------- charts ----------
+let breakdownChart, sensitivityChart;
+let chartsReady = false;
+
+function initCharts(){
+  if(typeof Chart === 'undefined'){
+    console.error('Chart.js failed to load');
+    return;
+  }
+  const ctx1 = document.getElementById('breakdownChart').getContext('2d');
+  breakdownChart = new Chart(ctx1, {
+    type: 'bar',
+    data: {
+      labels: ['연금저축/IRP','일반계좌(커버드콜)'],
+      datasets: [
+        { label:'세후 실수령', data:[0,0], backgroundColor:'#1F6F63' },
+        { label:'세금', data:[0,0], backgroundColor:'#B9782C' },
+        { label:'건보료', data:[0,0], backgroundColor:'#A3402F' }
+      ]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{font:{family:"'Noto Sans KR'"}} } },
+      scales: {
+        x:{ stacked:true, ticks:{font:{family:"'Noto Sans KR'"}} },
+        y:{ stacked:true, ticks:{ callback:v=>v.toLocaleString()+'만' } }
+      }
+    }
+  });
+
+  const ctx2 = document.getElementById('sensitivityChart').getContext('2d');
+  sensitivityChart = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label:'일반계좌 25%', data:[], borderColor:'#1F6F63', backgroundColor:'#1F6F63', tension:.25, pointRadius:0, borderWidth:2 },
+        { label:'일반계좌 60%', data:[], borderColor:'#17233A', backgroundColor:'#17233A', tension:.25, pointRadius:0, borderWidth:2 },
+        { label:'일반계좌 90%', data:[], borderColor:'#B9782C', backgroundColor:'#B9782C', tension:.25, pointRadius:0, borderWidth:2 },
+        { label:'현재 설정', data:[], borderColor:'#A3402F', backgroundColor:'#A3402F', pointRadius:6, pointStyle:'circle', showLine:false }
+      ]
+    },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{font:{family:"'Noto Sans KR'"}} } },
+      scales: {
+        x:{ title:{display:true,text:'일반계좌 배당 비중(%)'} },
+        y:{ title:{display:true,text:'전체 세후 실수령(만원)'}, ticks:{ callback:v=>v.toLocaleString()+'만' } }
+      }
+    }
+  });
+  chartsReady = true;
+}
+
+function updateCharts(total, subscriber, ageRate, current){
+  if(!chartsReady) return;
+  breakdownChart.data.datasets[0].data = [Math.round(current.p.net), Math.round(current.g.net)];
+  breakdownChart.data.datasets[1].data = [Math.round(current.p.tax), Math.round(current.g.tax)];
+  breakdownChart.data.datasets[2].data = [Math.round(current.p.health), Math.round(current.g.health)];
+  breakdownChart.update();
+
+  const xs = [];
+  for(let d=2; d<=50; d+=2) xs.push(d);
+  sensitivityChart.data.labels = xs.map(x=>x+'%');
+  [25,60,90].forEach((gr, idx)=>{
+    const ys = xs.map(d => Math.round(computeAll(total, gr, d, subscriber, ageRate).totalNet));
+    sensitivityChart.data.datasets[idx].data = ys;
+  });
+  const curX = xs.reduce((closest, x) => Math.abs(x-state.dividendRatio) < Math.abs(closest-state.dividendRatio) ? x : closest, xs[0]);
+  const curIdx = xs.indexOf(curX);
+  const ptData = xs.map((x,i)=> i===curIdx ? Math.round(current.totalNet) : null);
+  sensitivityChart.data.datasets[3].data = ptData;
+  sensitivityChart.update();
+}
+
+// ---------- render ----------
+function render(){
+  const total = state.total;
+  const pensionRatio = 100 - state.generalRatio;
+  const result = computeAll(total, state.generalRatio, state.dividendRatio, state.subscriber, state.ageRate);
+
+  document.getElementById('totalAmtInput').value = total;
+  document.getElementById('totalAmt').value = total;
+  document.getElementById('v-ratio').textContent = state.generalRatio + '%';
+  document.getElementById('v-pension-ratio').textContent = pensionRatio + '%';
+  document.getElementById('v-divratio').textContent = state.dividendRatio + '%';
+
+  document.getElementById('c-total').textContent = fmt(total);
+  document.getElementById('c-burden').textContent = fmt(result.burden);
+  document.getElementById('c-net').textContent = fmt(result.totalNet);
+  document.getElementById('c-rate').textContent = fmtPct(result.rate);
+
+  document.getElementById('p-alloc').textContent = fmt(result.p.alloc);
+  document.getElementById('p-taxable').textContent = fmt(result.p.taxable);
+  document.getElementById('p-tax').textContent = fmt(result.p.tax);
+  document.getElementById('p-health').textContent = fmt(result.p.health);
+  document.getElementById('p-net').textContent = fmt(result.p.net);
+
+  document.getElementById('g-alloc').textContent = fmt(result.g.alloc);
+  document.getElementById('g-taxable').textContent = fmt(result.g.taxable);
+  document.getElementById('g-tax').textContent = fmt(result.g.tax);
+  document.getElementById('g-health').textContent = fmt(result.g.health);
+  document.getElementById('g-net').textContent = fmt(result.g.net);
+
+  document.getElementById('s-alloc').textContent = fmt(result.p.alloc + result.g.alloc);
+  document.getElementById('s-tax').textContent = fmt(result.totalTax);
+  document.getElementById('s-health').textContent = fmt(result.totalHealth);
+  document.getElementById('s-net').textContent = fmt(result.totalNet);
+
+  updateCharts(total, state.subscriber, state.ageRate, result);
+}
+
+// ---------- events ----------
+document.getElementById('totalAmt').addEventListener('input', e=>{ state.total = +e.target.value; render(); });
+document.getElementById('totalAmtInput').addEventListener('input', e=>{
+  let v = +e.target.value;
+  if(v < 2000) v = 2000;
+  if(v > 20000) v = 20000;
+  state.total = v;
+  render();
+});
+document.getElementById('generalRatio').addEventListener('input', e=>{ state.generalRatio = +e.target.value; render(); });
+document.getElementById('dividendRatio').addEventListener('input', e=>{ state.dividendRatio = +e.target.value; render(); });
+document.getElementById('ageRate').addEventListener('change', e=>{ state.ageRate = +e.target.value; render(); });
+
+document.querySelectorAll('.scenario-tag button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    state.dividendRatio = +btn.dataset.set;
+    document.getElementById('dividendRatio').value = state.dividendRatio;
+    render();
+  });
+});
+
+document.getElementById('btn-region').addEventListener('click', ()=>{
+  state.subscriber = 'region';
+  document.getElementById('btn-region').classList.add('active');
+  document.getElementById('btn-workplace').classList.remove('active');
+  render();
+});
+document.getElementById('btn-workplace').addEventListener('click', ()=>{
+  state.subscriber = 'workplace';
+  document.getElementById('btn-workplace').classList.add('active');
+  document.getElementById('btn-region').classList.remove('active');
+  render();
+});
+
+window.addEventListener('load', ()=>{
+  initCharts();
+  render();
+});
+// fallback in case load already fired
+if(document.readyState === 'complete'){ initCharts(); render(); }
+</script>
+</body>
+</html>

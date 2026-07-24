@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>은퇴/노후 종합 설계 시뮬레이션</title>
+    <!-- Chart.js 라이브러리 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0b2545;
+            --secondary-color: #134074;
+            --accent-color: #d9480f;
+            --bg-color: #f8f9fa;
+            --border-color: #e9ecef;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin: 10px 0 20px 0;
+            font-size: 20px;
+            font-weight: 800;
+        }
+        h2 {
+            color: var(--secondary-color);
+            font-size: 15px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #e9ecef;
+            padding-bottom: 6px;
+        }
+        h2::before {
+            content: "";
+            display: inline-block;
+            width: 3px;
+            height: 14px;
+            background-color: var(--secondary-color);
+            margin-right: 6px;
+            border-radius: 2px;
+        }
+
+        /* 입력 정보 영역 */
+        .input-section {
+            background-color: #fdfdfd;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 14px;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #495057;
+        }
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .input-wrapper input, .input-wrapper select {
+            width: 100%;
+            padding: 10px 40px 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+        .input-wrapper .unit {
+            position: absolute;
+            right: 12px;
+            color: #868e96;
+            font-size: 13px;
+            pointer-events: none;
+        }
+        .help-text {
+            font-size: 11px;
+            color: #868e96;
+            margin-top: 2px;
+            display: block;
+        }
+
+        /* 수익률 빠른 선택 버튼 구역 */
+        .roi-btn-group {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .roi-btn {
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            padding: 6px 0;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #495057;
+            text-align: center;
+        }
+        .roi-btn.active {
+            background-color: var(--secondary-color);
+            color: #fff;
+            border-color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .btn-calc {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--secondary-color);
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 결과 영역 */
+        .result-section {
+            display: none;
+        }
+        .ready-box {
+            background: #fff4e6;
+            border: 1px solid #ffd8a8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .progress-bg {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #4dabf7, #339af0);
+            height: 100%;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 1px;
+            font-weight: bold;
+            font-size: 12px;
+            color: #212529;
+        }
+
+        /* 탭 메뉴 */
+        .tab-menu {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 15px;
+            padding: 0;
+            list-style: none;
+        }
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            font-weight: bold;
+            color: #868e96;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-item.active {
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--secondary-color);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 스크롤 테이블 */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .highlight-text { color: var(--accent-color); font-weight: bold; }
+        .safe-text { color: #2b8a3e; font-weight: bold; }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 260px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>노후 준비 진단 시뮬레이터</h1>
+
+    <!-- [구분 1] 입력받을 정보 영역 -->
+    <div class="input-section">
+        <h2>1. 진단 입력 정보</h2>
+        
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex:1;">
+                <label>현재 연령</label>
+                <div class="input-wrapper"><input type="number" id="inAgeSelf" value="55"><span class="unit">세</span></div>
+            </div>
+            <div style="flex:1;">
+                <label>은퇴 예상연령</label>
+                <div class="input-wrapper"><input type="number" id="inRetireAge" value="55"><span class="unit">세</span></div>
+            </div>
+            <div style="flex:1;">
+                <label>종료 연령</label>
+                <div class="input-wrapper"><input type="number" id="inLifeSelf" value="83"><span class="unit">세</span></div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>희망 월 은퇴 생활비 (현재가치 기준)</label>
+            <div class="input-wrapper">
+                <input type="number" id="inMonthlyReq" value="300">
+                <span class="unit">만원</span>
+            </div>
+            <span class="help-text">* 은퇴 후 물가상승률에 따라 매년 증가하여 계산됩니다.</span>
+        </div>
+
+        <div class="form-group">
+            <label>국민연금 예상 수령액 (현재가치 월 기준)</label>
+            <div class="input-wrapper">
+                <input type="number" id="inKookminMonthly" value="120">
+                <span class="unit">만원</span>
+            </div>
+            <span class="help-text">* 65세부터 수령 개시되며, 매년 물가상승률의 50%씩 증가합니다.</span>
+        </div>
+
+        <div class="form-group" style="display: flex; gap: 8px;">
+            <div style="flex:1;">
+                <label>퇴직연금</label>
+                <div class="input-wrapper"><input type="number" id="inAssetRetire" value="15000"><span class="unit">만</span></div>
+            </div>
+            <div style="flex:1;">
+                <label>연금저축</label>
+                <div class="input-wrapper"><input type="number" id="inAssetSaving" value="10000"><span class="unit">만</span></div>
+            </div>
+            <div style="flex:1;">
+                <label>기타자산</label>
+                <div class="input-wrapper"><input type="number" id="inAssetEtc" value="10000"><span class="unit">만</span></div>
+            </div>
+        </div>
+
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <div style="flex:1;">
+                <label>예상 투자 수익률(연)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="inRoi" value="5" step="0.1">
+                    <span class="unit">%</span>
+                </div>
+            </div>
+            <div style="flex:1;">
+                <label>예상 물가 상승률(연)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="inInflation" value="2.5" step="0.1">
+                    <span class="unit">%</span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="roi-btn-group">
+                <button type="button" class="roi-btn" onclick="setRoi(3, this)">3.0%</button>
+                <button type="button" class="roi-btn active" onclick="setRoi(5, this)">5.0%</button>
+                <button type="button" class="roi-btn" onclick="setRoi(6.5, this)">6.5%</button>
+                <button type="button" class="roi-btn" onclick="setRoi(8, this)">8.0%</button>
+            </div>
+        </div>
+
+        <button class="btn-calc" onclick="runSimulation()">시뮬레이션 분석 실행</button>
+    </div>
+
+    <!-- [구분 2] 계산 결과 표시 영역 -->
+    <div class="result-section" id="resultSection">
+        
+        <h2>2. 시뮬레이션 결과 요약</h2>
+        <div class="ready-box">
+            <div id="summaryText">고객님의 은퇴 후 기간은 총 0년입니다.</div>
+            <div class="progress-bg">
+                <div class="progress-fill" id="outProgressBar"></div>
+                <div class="progress-text" id="outProgressText">0%</div>
+            </div>
+        </div>
+
+        <!-- 탭 메뉴 조작 -->
+        <ul class="tab-menu">
+            <li class="tab-item active" onclick="switchTab(0)">필요자금 구조</li>
+            <li class="tab-item" onclick="switchTab(1)">자산 고갈 추이</li>
+            <li class="tab-item" onclick="switchTab(2)">연도별 상세표</li>
+        </ul>
+
+        <!-- 탭 0: 세분화된 자산 구성 비교 -->
+        <div class="tab-content active" id="tab0">
+            <div class="chart-container" style="height: 230px;">
+                <canvas id="donutChart"></canvas>
+            </div>
+            <table style="margin-top:10px;">
+                <thead>
+                    <tr>
+                        <th>구분 자산 항목</th>
+                        <th>금액 규모 (누계/준비액)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>총 필요 노후자금 <span class="help-text">(물가 반영 지출 총액)</span></td>
+                        <td id="tblTotalReq" style="font-weight:bold;">0만원</td>
+                    </tr>
+                    <tr>
+                        <td>생애 총 수령 국민연금</td>
+                        <td id="tblTotalKookmin" style="color:#d99800; font-weight:bold;">0만원</td>
+                    </tr>
+                    <tr>
+                        <td>하단 준비자산: ① 퇴직연금</td>
+                        <td id="tblStructureRetire">0만원</td>
+                    </tr>
+                    <tr>
+                        <td>하단 준비자산: ② 연금저축</td>
+                        <td id="tblStructureSaving">0만원</td>
+                    </tr>
+                    <tr>
+                        <td>하단 준비자산: ③ 기타자산</td>
+                        <td id="tblStructureEtc">0만원</td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;" id="rowShortage">
+                        <td class="highlight-text" id="lblShortageText">최종 부족금액(투자수익 반영 후)</td>
+                        <td id="tblShortage" class="highlight-text">0만원</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 탭 1: 자산 흐름 추이 그래프 -->
+        <div class="tab-content" id="tab1">
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 탭 2: 연도별 상세 데이터 표 -->
+        <div class="tab-content" id="tab2">
+            <div class="table-responsive" style="max-height: 300px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>연령</th>
+                            <th>연 필요액</th>
+                            <th>국민연금</th>
+                            <th>준비자산 잔액(투자반영)</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dynamicTableBody">
+                        <!-- 스크립트에서 자동 연산 반영 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+let donutChart = null;
+let barChart = null;
+
+function setRoi(val, btn) {
+    document.getElementById('inRoi').value = val;
+    document.querySelectorAll('.roi-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    runSimulation();
+}
+
+function switchTab(index) {
+    const tabs = document.querySelectorAll('.tab-menu .tab-item');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach((tab, i) => {
+        if(i === index) {
+            tab.classList.add('active');
+            contents[i].classList.add('active');
+        } else {
+            tab.classList.remove('active');
+            contents[i].classList.remove('active');
+        }
+    });
+}
+
+function runSimulation() {
+    // 1. 입력데이터 수집
+    const ageSelf = parseInt(document.getElementById('inAgeSelf').value) || 0;
+    const retireAge = parseInt(document.getElementById('inRetireAge').value) || 0;
+    const lifeSelf = parseInt(document.getElementById('inLifeSelf').value) || 0;
+    
+    const monthlyReq = parseFloat(document.getElementById('inMonthlyReq').value) || 0;
+    const kookminMonthly = parseFloat(document.getElementById('inKookminMonthly').value) || 0;
+    
+    const assetRetire = parseFloat(document.getElementById('inAssetRetire').value) || 0;
+    const assetSaving = parseFloat(document.getElementById('inAssetSaving').value) || 0;
+    const assetEtc = parseFloat(document.getElementById('inAssetEtc').value) || 0;
+    const initialTotalAsset = assetRetire + assetSaving + assetEtc;
+
+    const roi = (parseFloat(document.getElementById('inRoi').value) || 0) / 100;
+    const inflation = (parseFloat(document.getElementById('inInflation').value) || 0) / 100;
+
+    const livingPeriod = lifeSelf - retireAge;
+    if (livingPeriod <= 0) {
+        alert("종료 연령은 은퇴 예상연령보다 커야 합니다.");
+        return;
+    }
+
+    // 2. 연도별 순차적 복리 시뮬레이션 연산 실행
+    let currentAsset = initialTotalAsset;
+    let totalReqFund = 0;
+    let totalKookminReceived = 0;
+    let finalDeficit = 0; // 복리 계산 후 최종 시점의 순수 부족액 트래킹 변수
+
+    let labels = [];
+    let assetTrend = [];
+    let tableHtml = "";
+    let yearsFromNow = 0;
+
+    for (let age = retireAge; age <= lifeSelf; age++) {
+        labels.push(age + '세');
+        yearsFromNow = age - ageSelf;
+        if (yearsFromNow < 0) yearsFromNow = 0;
+
+        let yearlyReq = (monthlyReq * 12) * Math.pow(1 + inflation, yearsFromNow);
+        
+        let yearlyKookmin = 0;
+        if (age >= 65) {
+            let kookminYears = age - 65;
+            yearlyKookmin = (kookminMonthly * 12) * Math.pow(1 + (inflation * 0.5), kookminYears);
+        }
+
+        totalReqFund += yearlyReq;
+        totalKookminReceived += yearlyKookmin;
+
+        // 전년도 잔액 자산에 투자수익률 반영 후 입출금 처리
+        let nextAsset = currentAsset * (1 + roi) + yearlyKookmin - yearlyReq;
+        
+        // 자산이 마이너스로 돌아섰을 때(고갈 발생 시) 누적 부족액 트래킹
+        if (nextAsset < 0) {
+            if (currentAsset > 0) {
+                // 이번 연도에 최초 고갈된 경우
+                finalDeficit += (yearlyReq - yearlyKookmin - currentAsset * (1 + roi));
+            } else {
+                // 이미 고갈된 상태가 지속되는 경우 (이전 자산이 0이므로 순수 지출액만큼 부족 발생)
+                finalDeficit += (yearlyReq - yearlyKookmin);
+            }
+            currentAsset = 0;
+        } else {
+            currentAsset = nextAsset;
+        }
+
+        assetTrend.push(Math.round(currentAsset));
+
+        let statusText = currentAsset > 0 ? "안정" : "고갈";
+        let statusClass = currentAsset > 0 ? "safe-text" : "highlight-text";
+
+        tableHtml += `<tr>
+            <td>${age}세</td>
+            <td>${Math.round(yearlyReq).toLocaleString()}만</td>
+            <td>${Math.round(yearlyKookmin).toLocaleString()}만</td>
+            <td class="${statusClass}">${Math.round(currentAsset).toLocaleString()}만</td>
+            <td class="${statusClass}">${statusText}</td>
+        </tr>`;
+    }
+
+    // 3. 일치화된 지표 연산 (복리 투자 성과 적용 후 최종 준비율 재정의)
+    let readyRate = 0;
+    let netShortage = 0;
+
+    if (finalDeficit > 0) {
+        // 자산이 도중에 고갈되어 진짜 부족한 상황
+        netShortage = finalDeficit;
+        // 준비율 = 1 - (최종 복리 부족액 / 총 필요 노후자금)
+        readyRate = Math.max(0, Math.round((1 - (netShortage / totalReqFund)) * 100));
+    } else {
+        // 고갈되지 않고 종료 연령까지 잔액이 남는 안전한 상황
+        netShortage = 0;
+        readyRate = 100;
+    }
+
+    // 4. 연산 결과 화면 출력 처리
+    document.getElementById('resultSection').style.display = 'block';
+    
+    if(netShortage > 0) {
+        document.getElementById('summaryText').innerHTML = `고객님의 은퇴준비율은 <span class="highlight-text">${readyRate}%</span> 이며, 은퇴 후반 자산 고갈 위험이 있습니다.`;
+        document.getElementById('lblShortageText').innerText = "최종 부족 금액 (과부족)";
+        document.getElementById('tblShortage').innerText = Math.round(netShortage).toLocaleString() + " 만원";
+        document.getElementById('tblShortage').className = "highlight-text";
+    } else {
+        document.getElementById('summaryText').innerHTML = `고객님의 은퇴준비율은 <span class="safe-text">100%</span> 이며, 종료 연령까지 노후 자금이 <span class="safe-text">안정</span>적입니다.`;
+        document.getElementById('lblShortageText').innerText = "종료 시 자산 여유분";
+        document.getElementById('tblShortage').innerText = Math.round(currentAsset).toLocaleString() + " 만원";
+        document.getElementById('tblShortage').className = "safe-text";
+    }
+
+    document.getElementById('outProgressBar').style.width = readyRate + '%';
+    document.getElementById('outProgressText').innerText = readyRate + '%';
+
+    // 1번 요청 사항: 구조 테이블에 퇴직연금, 연금저축, 기타자산 분리 표시
+    document.getElementById('tblTotalReq').innerText = Math.round(totalReqFund).toLocaleString() + " 만원";
+    document.getElementById('tblTotalKookmin').innerText = Math.round(totalKookminReceived).toLocaleString() + " 만원";
+    document.getElementById('tblStructureRetire').innerText = Math.round(assetRetire).toLocaleString() + " 만원";
+    document.getElementById('tblStructureSaving').innerText = Math.round(assetSaving).toLocaleString() + " 만원";
+    document.getElementById('tblStructureEtc').innerText = Math.round(assetEtc).toLocaleString() + " 만원";
+    document.getElementById('dynamicTableBody').innerHTML = tableHtml;
+
+    // 5. 차트 0 렌더링 (도넛 차트 - 입력받은 3가지 자산 종류별 분리 시각화)
+    const ctxDonut = document.getElementById('donutChart').getContext('2d');
+    if (donutChart) donutChart.destroy();
+    
+    // 차트에 들어갈 데이터셋 구성
+    let chartLabels = ['국민연금(누적 수령)', '퇴직연금(초기)', '연금저축(초기)', '기타자산(초기)'];
+    let chartData = [totalKookminReceived, assetRetire, assetSaving, assetEtc];
+    let chartColors = ['#fcc419', '#4dabf7', '#748ffc', '#37b24d'];
+
+    if (netShortage > 0) {
+        chartLabels.push('최종 부족금액');
+        chartData.push(netShortage);
+        chartColors.push('#ff8787');
+    }
+
+    donutChart = new Chart(ctxDonut, {
+        type: 'doughnut',
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                data: chartData,
+                backgroundColor: chartColors
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+    });
+
+    // 6. 차트 1 렌더링 (선 그래프)
+    const ctxBar = document.getElementById('barChart').getContext('2d');
+    if (barChart) barChart.destroy();
+    barChart = new Chart(ctxBar, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '연도별 자산 잔액 추이 (투자수익 포함)',
+                data: assetTrend,
+                borderColor: '#134074',
+                backgroundColor: 'rgba(19, 64, 116, 0.1)',
+                fill: true,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+                x: { ticks: { font: { size: 10 }, maxTicksLimit: 8 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+</script>
+
+</body>
+</html>
