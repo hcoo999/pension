@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>노후자금 통장 계산기</title>
+<style>
+  :root{
+    --ink:#1f2933;
+    --paper:#faf6ee;
+    --paper-line:#dcd0ba;
+    --navy:#152238;
+    --navy-2:#1f3358;
+    --gold:#a9793f;
+    --gold-soft:#e7d6b8;
+    --red-stamp:#8c2f28;
+    --green-ok:#3f5d3a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.04), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.03), transparent 40%);
+    color:var(--ink);
+    font-family:'Noto Sans KR','Malgun Gothic',sans-serif;
+    min-height:100vh;
+    padding:32px 16px 64px;
+  }
+  .wrap{max-width:920px;margin:0 auto;}
+
+  .masthead{
+    text-align:center;
+    color:var(--gold-soft);
+    margin-bottom:28px;
+  }
+  .masthead .eyebrow{
+    letter-spacing:0.35em;
+    font-size:11px;
+    color:#9fb0c9;
+    text-transform:uppercase;
+  }
+  .masthead h1{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:32px;
+    margin:6px 0 4px;
+    color:#f4ecd8;
+  }
+  .masthead p{
+    font-size:13px;
+    color:#8f9fb8;
+    margin:0;
+  }
+
+  .passbook{
+    background:var(--paper);
+    border-radius:6px;
+    box-shadow:0 24px 60px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.05);
+    position:relative;
+    overflow:hidden;
+  }
+  .passbook::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:34px;
+    background:repeating-linear-gradient(
+      to bottom,
+      transparent 0px, transparent 8px,
+      rgba(0,0,0,0.06) 8px, rgba(0,0,0,0.06) 9px
+    );
+    border-right:1px dashed var(--paper-line);
+  }
+  .passbook-inner{padding:36px 40px 40px 62px;}
+
+  .cover-row{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    border-bottom:2px solid var(--navy);
+    padding-bottom:14px; margin-bottom:24px;
+  }
+  .cover-row h2{
+    font-family:'Noto Serif KR',serif;
+    font-size:20px; margin:0; color:var(--navy);
+  }
+  .cover-row .acct-no{
+    font-family:'Courier New',monospace;
+    font-size:12px; color:#8a7a5c; letter-spacing:1px;
+  }
+
+  fieldset{
+    border:1px solid var(--paper-line);
+    border-radius:4px;
+    padding:16px 18px 18px;
+    margin:0 0 20px;
+  }
+  legend{
+    font-size:12px;
+    font-weight:700;
+    color:var(--gold);
+    padding:0 8px;
+    letter-spacing:0.05em;
+  }
+  legend .legend-sub{
+    font-weight:400;
+    color:#a3937a;
+    font-size:11px;
+    letter-spacing:0;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px 20px;
+  }
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:12.5px; color:#5b5346; font-weight:500;}
+  label .unit{color:#a3937a; font-weight:400;}
+  input[type=number]{
+    font-family:'Courier New',monospace;
+    font-size:16px;
+    padding:8px 10px;
+    border:1px solid #c9bb9c;
+    border-radius:3px;
+    background:#fffdf8;
+    color:var(--ink);
+    width:100%;
+  }
+  input[type=number]:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .hint{font-size:11px; color:#9c8f77; margin-top:2px;}
+
+  .calc-btn{
+    display:block; width:100%;
+    background:var(--navy);
+    color:#f4ecd8;
+    border:none;
+    border-radius:4px;
+    padding:14px;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:0.05em;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .calc-btn:hover{background:var(--navy-2);}
+  .calc-btn:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+
+  #error{
+    color:var(--red-stamp);
+    font-size:13px;
+    font-weight:600;
+    margin-top:10px;
+    display:none;
+  }
+
+  .stamps{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    margin:26px 0 6px;
+  }
+  .stamp{
+    border:2px solid var(--navy);
+    border-radius:6px;
+    padding:16px 18px;
+    position:relative;
+    background:#fffdf8;
+  }
+  .stamp .label{
+    font-size:11.5px;
+    color:#6b6151;
+    letter-spacing:0.03em;
+    margin-bottom:6px;
+  }
+  .stamp .value{
+    font-family:'Courier New',monospace;
+    font-size:21px;
+    font-weight:700;
+    color:var(--navy);
+    white-space:nowrap;
+  }
+  .stamp .value small{font-size:13px; font-weight:500; color:#8a7a5c;}
+  .stamp.accent{border-color:var(--red-stamp);}
+  .stamp.accent .value{color:var(--red-stamp);}
+
+  .table-wrap{margin-top:28px;}
+  .table-title{
+    font-family:'Noto Serif KR',serif;
+    font-size:15px;
+    color:var(--navy);
+    border-bottom:1px solid var(--paper-line);
+    padding-bottom:8px;
+    margin-bottom:0;
+    display:flex; justify-content:space-between; align-items:baseline;
+  }
+  .table-title span{font-size:11px; color:#a3937a; font-family:'Noto Sans KR',sans-serif;}
+  .ledger-scroll{max-height:420px; overflow-y:auto; border:1px solid var(--paper-line); border-top:none;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Courier New',monospace;
+    font-size:12.5px;
+  }
+  thead th{
+    position:sticky; top:0;
+    background:var(--navy);
+    color:#dfe6f0;
+    font-family:'Noto Sans KR',sans-serif;
+    font-weight:500;
+    font-size:11.5px;
+    padding:9px 8px;
+    text-align:right;
+    white-space:nowrap;
+  }
+  thead th:first-child, thead th:nth-child(2){text-align:center;}
+  tbody td{
+    padding:6px 8px;
+    text-align:right;
+    border-bottom:1px solid #ece3d0;
+    white-space:nowrap;
+  }
+  tbody td:first-child, tbody td:nth-child(2){text-align:center; color:#8a7a5c;}
+  tbody tr:nth-child(even){background:#f3ecdc;}
+  tbody tr.phase-active{background:#e9efe0;}
+  tbody tr.phase-active:nth-child(even){background:#e2ead6;}
+  .balance-col{color:var(--gold); font-weight:700;}
+  .pension-col{color:var(--green-ok);}
+
+  .legend-note{
+    font-size:11px; color:#9c8f77; margin-top:8px; line-height:1.6;
+  }
+  .legend-note b{color:#6b6151;}
+
+  .chart-wrap{margin-top:28px;}
+  .chart-host{
+    border:1px solid var(--paper-line);
+    border-top:none;
+    background:#fffdf8;
+    padding:8px 4px 0;
+  }
+  .chart-host svg{display:block; width:100%; height:auto;}
+  .chart-legend{
+    display:flex; flex-wrap:wrap; gap:16px;
+    font-size:11.5px; color:#6b6151;
+    padding:10px 4px 0;
+  }
+  .chart-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:10px; height:10px; border-radius:2px; display:inline-block;}
+  .dot-line{background:var(--gold);}
+  .dot-start{background:var(--navy); border-radius:50%;}
+  .dot-pension{background:var(--green-ok); border-radius:50%;}
+
+  @media (max-width:640px){
+    .grid{grid-template-columns:1fr;}
+    .stamps{grid-template-columns:1fr;}
+    .passbook-inner{padding:28px 18px 32px 40px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="passbook">
+    <div class="passbook-inner">
+
+      <div class="cover-row">
+        <h2>총 필요금액 예상</h2>
+      </div>
+
+      <fieldset>
+        <legend>① 연령 설정</legend>
+        <div class="grid">
+          <div class="field">
+            <label>지정 연령 <span class="unit">(소득종료예상, 현재가치 기준)</span></label>
+            <input type="number" id="refAge" value="45" min="0" step="1">
+            <div class="hint">미래특정연령 이하여야 합니다</div>
+          </div>
+          <div class="field">
+            <label>미래특정연령 <span class="unit">(생활비 발생 시작)</span></label>
+            <input type="number" id="startAge" value="65" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>종료 연령 <span class="unit">(생활비 발생 종료)</span></label>
+            <input type="number" id="endAge" value="100" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>연평균 수익률 <span class="unit">(%)</span></label>
+            <input type="number" id="rate" value="3.8" min="0" step="0.1">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>② 예상 생활비 <span class="legend-sub">— 미래에 소요될 금액</span></legend>
+        <div class="grid">
+          <div class="field">
+            <label>월 생활비 <span class="unit">(만원, 미래특정연령 시점 기준)</span></label>
+            <input type="number" id="monthlyCost" value="300" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>물가상승률 <span class="unit">(%, 매년 생활비 인상)</span></label>
+            <input type="number" id="inflation" value="2" min="0" step="0.1">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>③ 공적연금 (국민연금 등) <span class="legend-sub">— 미래에 수입이 될 금액</span></legend>
+        <div class="grid">
+          <div class="field">
+            <label>연금 개시 연령</label>
+            <input type="number" id="pensionAge" value="65" min="0" step="1">
+            <div class="hint">수령 예정이 없으면 0 입력</div>
+          </div>
+          <div class="field">
+            <label>예상 수령금액 <span class="unit">(만원/월, 개시연령 기준)</span></label>
+            <input type="number" id="pensionMonthly" value="0" min="0" step="1">
+            <div class="hint">※ 매년 물가상승률의 1/2만큼 증가 적용</div>
+          </div>
+        </div>
+      </fieldset>
+
+      <button class="calc-btn" onclick="calculate()">총 필요한 금액 계산하기</button>
+      <div id="error"></div>
+
+      <div id="results" style="display:none;">
+        <div class="stamps">
+          <div class="stamp">
+            <div class="label"><span id="startAgeLabel">65</span>세 시점 필요 총액</div>
+            <div class="value"><span id="reqAtStart">-</span></div>
+          </div>
+          <div class="stamp accent">
+            <div class="label"><span id="refAgeLabel">45</span>세 기준 현재가치</div>
+            <div class="value"><span id="reqAtRef">-</span></div>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="table-title">연령별 필요 적립금 추이 <span>지정연령 → 종료연령</span></div>
+          <div id="chartHost" class="chart-host"></div>
+          <div class="chart-legend">
+            <span><i class="dot dot-line"></i> 필요 적립금</span>
+            <span><i class="dot dot-start"></i> 지출 시작 (미래특정연령)</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-title">연령별 소요금액 시뮬레이션 <span>지정연령 → 종료연령</span></div>
+          <div class="ledger-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>연령</th><th>경과년</th>
+                  <th>월 생활비</th><th>연금 수령</th><th>순부담(월)</th>
+                  <th>순부담(연)</th><th>필요 적립금</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="legend-note">
+            <b>월 생활비</b>는 물가상승률만큼, <b>연금 수령액</b>은 물가상승률의 1/2만큼 매년 증가한 금액이 반영됩니다. <b>필요 적립금</b>은 해당 연령 시점에 남은 생활비를 모두 충당하기 위해 그 시점에 보유하고 있어야 할 금액(만원)입니다.
+            연금 수령 시작 이후에는 물가상승 반영된 월 생활비에서 인상 적용된 연금 수령액을 차감한 <b>순부담</b>만 반영합니다. 초록색 배경은 연금 수령 기간입니다.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function fmt(n){
+  return Math.round(n).toLocaleString('ko-KR');
+}
+
+// 만원 단위 숫자를 "◯억 ◯,◯◯◯만원" 형태로 변환
+function fmtEok(n){
+  const rounded = Math.round(n);
+  const eok = Math.floor(rounded / 10000);
+  const man = rounded - eok * 10000;
+  if(eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString('ko-KR')}만원`;
+  if(eok > 0 && man === 0) return `${eok}억원`;
+  return `${man.toLocaleString('ko-KR')}만원`;
+}
+
+function calculate(){
+  const refAge = parseInt(document.getElementById('refAge').value);
+  const startAge = parseInt(document.getElementById('startAge').value);
+  const endAge = parseInt(document.getElementById('endAge').value);
+  const rate = parseFloat(document.getElementById('rate').value);
+  const inflation = parseFloat(document.getElementById('inflation').value);
+  const monthlyCost = parseFloat(document.getElementById('monthlyCost').value);
+  const pensionAge = parseInt(document.getElementById('pensionAge').value) || 0;
+  const pensionMonthly = parseFloat(document.getElementById('pensionMonthly').value) || 0;
+
+  const errEl = document.getElementById('error');
+  errEl.style.display = 'none';
+
+  if([refAge,startAge,endAge,rate,monthlyCost,inflation].some(v=>isNaN(v))){
+    errEl.textContent = '모든 항목을 올바르게 입력해 주세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!(refAge <= startAge)){
+    errEl.textContent = '지정 연령은 미래특정연령보다 작거나 같아야 합니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!(startAge <= endAge)){
+    errEl.textContent = '미래특정연령은 종료 연령보다 작거나 같아야 합니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(rate < 0 || monthlyCost < 0 || inflation < 0){
+    errEl.textContent = '수익률, 물가상승률, 생활비는 0 이상이어야 합니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const r = rate/100;
+  const infl = inflation/100;
+
+  // 미래특정연령 시점 금액에 물가상승률을 반영한 해당 연령의 월 생활비
+  function costAtAge(age){
+    return monthlyCost * Math.pow(1+infl, age - startAge);
+  }
+  // 공적연금은 물가상승률의 1/2만큼 매년 증가 (연금개시연령 기준 금액에서 인상)
+  function pensionAtAge(age){
+    if(pensionAge <= 0 || age < pensionAge) return 0;
+    return pensionMonthly * Math.pow(1 + infl/2, age - pensionAge);
+  }
+
+  // required[age] = 해당 연령 시점에 필요한 적립금(만원)
+  const required = {};
+  required[endAge+1] = 0;
+
+  // 종료연령 -> 미래특정연령: 연간 순부담을 반영하며 역산
+  for(let age = endAge; age >= startAge; age--){
+    const pensionAmt = pensionAtAge(age);
+    const netMonthly = Math.max(0, costAtAge(age) - pensionAmt);
+    const annualNet = netMonthly * 12;
+    required[age] = annualNet + required[age+1] / (1+r);
+  }
+  // 미래특정연령 이전 (지정연령까지): 지출 없이 할인만 진행
+  for(let age = startAge - 1; age >= refAge; age--){
+    required[age] = required[age+1] / (1+r);
+  }
+
+  document.getElementById('startAgeLabel').textContent = startAge;
+  document.getElementById('refAgeLabel').textContent = refAge;
+  document.getElementById('reqAtStart').textContent = fmtEok(required[startAge]);
+  document.getElementById('reqAtRef').textContent = fmtEok(required[refAge]);
+
+  // 표: 지정연령 ~ 종료연령
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  for(let age = refAge; age <= endAge; age++){
+    const inSpendPhase = age >= startAge;
+    const pensionAmt = pensionAtAge(age);
+    const pensionActive = pensionAmt > 0 && inSpendPhase;
+    const monthlyDisplay = inSpendPhase ? costAtAge(age) : 0;
+    const netMonthly = inSpendPhase ? Math.max(0, monthlyDisplay - pensionAmt) : 0;
+    const annualNet = netMonthly * 12;
+    const elapsed = age - refAge;
+
+    const tr = document.createElement('tr');
+    if(pensionActive) tr.classList.add('phase-active');
+    tr.innerHTML = `
+      <td>${age}세</td>
+      <td>${elapsed}년</td>
+      <td>${inSpendPhase ? fmt(monthlyDisplay) : '-'}</td>
+      <td class="pension-col">${pensionActive ? fmt(pensionAmt) : '-'}</td>
+      <td>${inSpendPhase ? fmt(netMonthly) : '-'}</td>
+      <td>${inSpendPhase ? fmt(annualNet) : '-'}</td>
+      <td class="balance-col">${fmt(required[age])}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  drawChart(required, refAge, startAge, endAge, pensionAge);
+
+  document.getElementById('results').style.display = 'block';
+}
+
+// 연령별 필요 적립금 추이를 SVG 라인/영역 차트로 그림
+function drawChart(required, refAge, startAge, endAge, pensionAge){
+  const ages = [];
+  for(let age = refAge; age <= endAge; age++) ages.push(age);
+
+  const W = 860, H = 300;
+  const padL = 58, padR = 20, padT = 18, padB = 34;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  const maxVal = Math.max(...ages.map(a => required[a]), 1);
+  const yMax = maxVal * 1.12;
+
+  const xOf = (age) => padL + (ages.length <= 1 ? 0 : (age - refAge) / (endAge - refAge) * plotW);
+  const yOf = (val) => padT + plotH - (val / yMax) * plotH;
+
+  // 영역/라인 경로
+  let linePts = ages.map(a => `${xOf(a).toFixed(1)},${yOf(required[a]).toFixed(1)}`);
+  const linePath = 'M' + linePts.join(' L');
+  const areaPath = linePath + ` L${xOf(endAge).toFixed(1)},${(padT+plotH).toFixed(1)} L${xOf(refAge).toFixed(1)},${(padT+plotH).toFixed(1)} Z`;
+
+  // Y축 눈금 (4단계, 억원 표기)
+  const yTicks = 4;
+  let yTicksSvg = '';
+  for(let i=0; i<=yTicks; i++){
+    const val = yMax * i / yTicks;
+    const y = yOf(val);
+    const eok = (val/10000).toFixed(val/10000 >= 10 ? 0 : 1);
+    yTicksSvg += `
+      <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#e7dcc4" stroke-width="1"/>
+      <text x="${padL-8}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="#8a7a5c" font-family="Courier New, monospace">${eok}억</text>
+    `;
+  }
+
+  // X축 눈금 (5개 지점: refAge, startAge, 중간, pensionAge 있으면, endAge)
+  const xTickAges = new Set([refAge, startAge, endAge]);
+  const totalSpan = endAge - refAge;
+  if(totalSpan > 4){
+    xTickAges.add(refAge + Math.round(totalSpan/2));
+  }
+  let xTicksSvg = '';
+  Array.from(xTickAges).sort((a,b)=>a-b).forEach(age=>{
+    const x = xOf(age);
+    xTicksSvg += `<text x="${x.toFixed(1)}" y="${H-padB+18}" text-anchor="middle" font-size="10.5" fill="#8a7a5c" font-family="Courier New, monospace">${age}세</text>`;
+  });
+
+  // 지출 시작선
+  let markers = '';
+  if(startAge >= refAge && startAge <= endAge){
+    const x = xOf(startAge);
+    markers += `<line x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${padT+plotH}" stroke="#152238" stroke-width="1.4" stroke-dasharray="4,3"/>`;
+  }
+
+  const svg = `
+    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#a9793f" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#a9793f" stop-opacity="0.02"/>
+        </linearGradient>
+      </defs>
+      ${yTicksSvg}
+      <line x1="${padL}" y1="${padT+plotH}" x2="${W-padR}" y2="${padT+plotH}" stroke="#152238" stroke-width="1.2"/>
+      ${markers}
+      <path d="${areaPath}" fill="url(#areaFill)" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="#a9793f" stroke-width="2.2"/>
+      ${xTicksSvg}
+    </svg>
+  `;
+  document.getElementById('chartHost').innerHTML = svg;
+}
+
+calculate();
+</script>
+</body>
+</html>
