@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover">
+<title>30년 인출 사다리 · 계좌 분산 계산기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233A;
+    --ink-soft:#5B6472;
+    --paper:#ECEAE1;
+    --card:#FBFAF6;
+    --line:#DAD6C8;
+    --growth:#2F6F5E;
+    --growth-light:#E3EEE9;
+    --buffer:#A9812F;
+    --buffer-light:#F4ECDA;
+    --danger:#B0413E;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Noto Sans KR',-apple-system,BlinkMacSystemFont,sans-serif;
+    font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:0 16px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    background:linear-gradient(180deg,var(--ink) 0%, #1E3450 100%);
+    color:#F3F1E9;
+    padding:28px 16px 24px;
+    border-radius:0 0 28px 28px;
+    margin-bottom:20px;
+  }
+  .hero-inner{max-width:480px;margin:0 auto;}
+  .eyebrow{
+    font-size:11px; letter-spacing:.18em; font-weight:700;
+    color:#9FB6C6; text-transform:uppercase; margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:'Noto Serif KR',serif;
+    font-weight:700;
+    font-size:26px;
+    line-height:1.35;
+    margin:0 0 10px;
+  }
+  .hero h1 span{color:#D8C282;}
+  .hero-desc{
+    font-size:13.5px;
+    line-height:1.6;
+    color:#C9D2D9;
+    margin:0 0 18px;
+  }
+  .ladder-chart{
+    display:flex;
+    align-items:flex-end;
+    gap:2.5px;
+    height:78px;
+    padding:0 2px;
+    border-bottom:1px solid rgba(255,255,255,.18);
+  }
+  .ladder-bar{
+    flex:1;
+    min-width:2px;
+    border-radius:3px 3px 0 0;
+    background:var(--growth);
+    position:relative;
+  }
+  .ladder-bar.buffer-mark::after{
+    content:'';
+    position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+    width:4px;height:4px;border-radius:50%;background:#D8C282;
+  }
+  .ladder-caption{
+    display:flex; justify-content:space-between;
+    font-size:10.5px; color:#8FA3B3; margin-top:6px;
+  }
+
+  /* ---------- Sections ---------- */
+  section{margin-bottom:20px;}
+  .section-title{
+    font-size:14px; font-weight:700; color:var(--ink);
+    display:flex; align-items:center; gap:6px;
+    margin:0 0 10px;
+  }
+  .section-title .dot{width:6px;height:6px;border-radius:50%;background:var(--growth);}
+
+  .rules{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:14px 16px;
+  }
+  .rules ol{margin:0;padding-left:18px;}
+  .rules li{font-size:12.5px; line-height:1.65; color:var(--ink-soft); margin-bottom:6px;}
+  .rules li b{color:var(--ink);}
+  .rules li:last-child{margin-bottom:0;}
+  .rules-toggle{
+    background:none;border:none;color:var(--growth);font-weight:700;font-size:12px;
+    padding:8px 0 0; text-align:left; cursor:pointer;
+  }
+
+  .card-block{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:var(--radius); padding:16px;
+  }
+  .field-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:11.5px; font-weight:700; color:var(--ink-soft);}
+  .field .input-row{
+    display:flex; align-items:center; border:1px solid var(--line);
+    border-radius:10px; background:#fff; padding:0 12px;
+  }
+  .field input{
+    border:none; outline:none; background:none; width:100%;
+    font-size:16px; font-weight:700; color:var(--ink); padding:11px 0;
+    font-family:inherit; font-variant-numeric:tabular-nums;
+  }
+  .field .unit{font-size:12px; color:var(--ink-soft); font-weight:600; white-space:nowrap;}
+
+  /* stocks */
+  .stock-row{
+    display:flex; gap:8px; margin-bottom:8px; align-items:center;
+  }
+  .stock-row input{
+    border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+    font-size:14px; font-family:inherit; outline:none; background:#fff; color:var(--ink);
+  }
+  .stock-row .s-name{flex:1.3;}
+  .stock-row .s-shares{flex:1;}
+  .stock-row .s-remove{
+    border:none; background:var(--buffer-light); color:var(--buffer);
+    width:34px;height:34px;border-radius:9px; font-size:16px; font-weight:700; cursor:pointer;
+    flex-shrink:0;
+  }
+  .add-stock-btn{
+    width:100%; border:1.5px dashed var(--line); background:none;
+    color:var(--growth); font-weight:700; font-size:13px;
+    padding:11px; border-radius:10px; cursor:pointer; margin-top:4px;
+  }
+  .empty-stock-note{font-size:12px; color:var(--ink-soft); padding:4px 2px 8px;}
+
+  /* actions */
+  .action-bar{
+    position:fixed; left:0; right:0; bottom:0;
+    background:rgba(236,234,225,.92); backdrop-filter:blur(8px);
+    border-top:1px solid var(--line);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+    display:flex; gap:10px; z-index:20;
+  }
+  .action-bar .wrap-btn{max-width:480px;margin:0 auto;display:flex;gap:10px;width:100%;}
+  .btn{
+    flex:1; border:none; border-radius:12px; padding:14px; font-size:14.5px;
+    font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{background:var(--growth); color:#fff;}
+  .btn-secondary{background:#fff; color:var(--ink); border:1px solid var(--line);}
+  .btn-primary:active, .btn-secondary:active{opacity:.75;}
+
+  /* summary cards */
+  .summary-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stat-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:13px 14px;
+  }
+  .stat-card .label{font-size:11px; color:var(--ink-soft); font-weight:600; margin-bottom:6px; display:flex; align-items:center; gap:5px;}
+  .stat-card .value{font-size:18px; font-weight:900; color:var(--ink); line-height:1.2;}
+  .stat-card .sub{font-size:10.5px; color:var(--ink-soft); margin-top:4px;}
+  .stat-card.growth{border-color:var(--growth); background:var(--growth-light);}
+  .stat-card.growth .value{color:var(--growth);}
+  .stat-card.buffer{border-color:var(--buffer); background:var(--buffer-light);}
+  .stat-card.buffer .value{color:var(--buffer);}
+
+  /* result list */
+  .result-total{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--ink); color:#F3F1E9; border-radius:12px; padding:12px 16px; margin-bottom:10px;
+    font-size:13px;
+  }
+  .result-total b{font-size:15px;}
+  .acc-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; margin-bottom:8px; cursor:pointer;
+  }
+  .acc-card.current{border:1.5px solid var(--growth); background:var(--growth-light);}
+  .acc-top{display:flex; align-items:center; justify-content:space-between;}
+  .acc-badge{
+    display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700;
+  }
+  .acc-num{
+    width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;
+    flex-shrink:0;
+  }
+  .acc-card.current .acc-num{background:var(--growth);}
+  .acc-timing{color:var(--ink-soft); font-weight:500;}
+  .acc-chevron{color:var(--ink-soft); font-size:12px; transition:transform .15s;}
+  .acc-card.open .acc-chevron{transform:rotate(180deg);}
+  .acc-stats{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px;
+  }
+  .acc-stats div{text-align:left;}
+  .acc-stats .k{font-size:10px; color:var(--ink-soft); margin-bottom:2px;}
+  .acc-stats .v{font-size:13px; font-weight:700; color:var(--ink);}
+  .acc-detail{
+    display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+  }
+  .acc-card.open .acc-detail{display:block;}
+  .acc-detail-row{display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); padding:3px 0;}
+  .acc-detail-row b{color:var(--ink); font-weight:700;}
+
+  /* guardrail */
+  .guardrail-result{margin-top:14px; padding-top:14px; border-top:1px dashed var(--line);}
+  .gr-row{display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-soft); padding:3px 0;}
+  .gr-row b{color:var(--ink); font-weight:700;}
+  .gr-badge{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px;
+    font-size:12.5px; font-weight:700; margin:0 0 10px;
+  }
+  .gr-badge.normal{background:var(--growth-light); color:var(--growth);}
+  .gr-badge.cut{background:#F6E4E3; color:var(--danger);}
+  .gr-badge.raise{background:var(--buffer-light); color:var(--buffer);}
+  .gr-final{
+    display:flex; justify-content:space-between; align-items:center;
+    background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-top:8px;
+  }
+  .gr-final .k{font-size:11.5px;color:var(--ink-soft);}
+  .gr-final .v{font-size:16px;font-weight:900;color:var(--ink);}
+
+  /* account rule explanation */
+  .acc-explain{
+    font-size:11.5px; line-height:1.6; color:var(--ink-soft);
+    background:rgba(255,255,255,.55); border-radius:8px; padding:8px 10px; margin-top:8px;
+  }
+  .acc-explain b{color:var(--ink);}
+
+  footer{padding:8px 4px 24px; font-size:11px; color:var(--ink-soft); line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow" id="heroEyebrow">Withdrawal Ladder · Custom Plan</div>
+    <h1 id="heroTitle">N년 인출 사다리  계좌 분산 계산기 </h1>
+    <p class="hero-desc">전체 자산을 원하는 개수의 계좌로 나눠 매년 하나씩 순서대로 사용합니다. 폭락장이 오면 그 계좌 대신 버퍼계좌를 먼저 사용해요.</p>
+    <div class="ladder-chart" id="ladderChart"></div>
+    <div class="ladder-caption"><span id="ladderStart">현재</span><span id="ladderEnd">N년 뒤</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="rules">
+    <div class="section-title"><span class="dot"></span>전략 원리</div>
+    <ol id="rulesList">
+      <li><b>계좌 성장 투자.</b> 자산 대부분을 원하는 개수의 계좌로 나눠 미국 지수 ETF(VOO, QQQM 등)에 투자.</li>
+      <li><b>버퍼(비상·완충) 별도 보관.</b> 예금·MMF·단기채 같은 현금성 안전자산에 생활비 1~2년치를 따로 둡니다.</li>
+      <li><b>연초에 순서대로 인출.</b> 1번→2번→… 계좌를 매년 하나씩 생활비로 씁니다. 인출 직전 폭락장이면 그 계좌 대신 버퍼에서 먼저 충당.</li>
+      <li><b>버퍼는 가드레일 규칙에 따라 조정.</b> 버퍼가 목표 대비 많이 줄면 인출액을 줄이고, 여유가 많으면 늘리며, 회복기엔 해당 연도 계좌를 매도해 버퍼를 다시 채웁니다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="dot"></span>계산 조건</div>
+    <div class="card-block">
+      <div class="field-grid">
+        <div class="field">
+          <label>초기 금액</label>
+          <div class="input-row"><input type="number" id="inTotal" value="5" step="0.1" inputmode="decimal"><span class="unit">억원</span></div>
+        </div>
+        <div class="field">
+          <label>연 수익률</label>
+          <div class="input-row"><input type="number" id="inReturn" value="10" step="0.1" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>연 물가상승률</label>
+          <div class="input-row"><input type="number" id="inInflation" value="3" step="0.1" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>거치기간</label>
+          <div class="input-row"><input type="number" id="inDefer" value="0" step="1" inputmode="numeric"><span class="unit">년</span></div>
+        </div>
+        <div class="field" style="grid-column:1/-1;">
+          <label>계좌 개수</label>
+          <div class="input-row"><input type="number" id="inAccounts" value="30" step="1" min="1" inputmode="numeric"><span class="unit">개</span></div>
+          <div style="font-size:11px;color:var(--ink-soft);">계좌 1개 = 1년치 인출. 원하는 기간만큼 조정 (예: 20년→20개, 40년→40개).</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="dot"></span>보유 종목 <span style="font-weight:400;color:var(--ink-soft);font-size:11.5px;">(계좌 비중대로 배분, 선택)</span></div>
+    <div class="card-block">
+      <div id="stockRows"></div>
+      <div id="emptyStockNote" class="empty-stock-note">종목을 추가하면 계좌별로 몇 주씩 배분되는지 함께 계산.</div>
+      <button class="add-stock-btn" id="addStockBtn">+ 종목 추가</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="dot"></span>결과 요약</div>
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="label">총 투입금액</div>
+        <div class="value" id="sumTotal">-</div>
+        <div class="sub" id="sumDefer">거치기간 0년</div>
+      </div>
+      <div class="stat-card growth">
+        <div class="label">월 인출액 (현재가치)</div>
+        <div class="value" id="sumRealMonthly">-</div>
+        <div class="sub" id="sumRealAnnual">오늘 기준 구매력</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">지급(연초) 월 인출액</div>
+        <div class="value" id="sumFirstMonthly">-</div>
+        <div class="sub" id="sumFirstAnnual">첫 인출</div>
+      </div>
+      <div class="stat-card buffer">
+        <div class="label" id="sumLastLabel">N년 뒤 월 인출액</div>
+        <div class="value" id="sumLastMonthly">-</div>
+        <div class="sub" id="sumLastAnnual">마지막 인출</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="dot"></span>가드레일 체크 <span style="font-weight:400;color:var(--ink-soft);font-size:11.5px;">(버퍼 상태로 이번 해 인출액 점검)</span></div>
+    <div class="card-block">
+      <div class="field-grid">
+        <div class="field">
+          <label>목표 버퍼 (생활비 몇 년치)</label>
+          <div class="input-row"><input type="number" id="inBufferYears" value="2" step="0.5" min="0" inputmode="decimal"><span class="unit">년치</span></div>
+        </div>
+        <div class="field">
+          <label>현재 버퍼 잔액</label>
+          <div class="input-row"><input type="number" id="inBufferBalance" value="10000" step="10" min="0" inputmode="decimal"><span class="unit">만원</span></div>
+        </div>
+        <div class="field">
+          <label>하한선 (감액 발동)</label>
+          <div class="input-row"><input type="number" id="inLowerGuard" value="50" step="1" min="0" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>하한 감액폭</label>
+          <div class="input-row"><input type="number" id="inCutPct" value="8" step="1" min="0" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>상한선 (증액 발동)</label>
+          <div class="input-row"><input type="number" id="inUpperGuard" value="150" step="1" min="0" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>상한 증액폭</label>
+          <div class="input-row"><input type="number" id="inRaisePct" value="5" step="1" min="0" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+      </div>
+      <div class="guardrail-result" id="guardrailResult"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="dot"></span>계좌별 상세 <span style="font-weight:400;color:var(--ink-soft);font-size:11.5px;">(탭하면 펼쳐져요)</span></div>
+    <div class="acc-explain" style="margin-bottom:10px;">
+      <b>배분 규칙</b>: 각 계좌의 초기 배분금액 = 그 해 필요한 인출액을 인출 시점까지 남은 기간 동안 연 수익률로 <b>현재가치 할인</b>한 값. 나중에 쓸 계좌일수록 불어날 시간이 많아 지금은 더 적은 금액만 넣어둬도 됩니다.
+    </div>
+    <div class="result-total">
+      <span>합계</span>
+      <span><b id="totalAlloc">-</b> &nbsp;/&nbsp; <b id="totalWithdraw">-</b></span>
+    </div>
+    <div id="resultList"></div>
+  </section>
+
+  <footer>
+    ※ 이 계산기는 참고용 시뮬레이션입니다. 실제 수익률·물가상승률은 변동되며, 세금·수수료는 반영되지 않았습니다. 투자 결정에 대한 책임은 투자자 본인에게 있습니다.
+  </footer>
+</div>
+
+<div class="action-bar">
+  <div class="wrap-btn">
+    <button class="btn btn-secondary" id="copyBtn">결과 텍스트 복사</button>
+    <button class="btn btn-primary" id="calcBtn">계산하기</button>
+  </div>
+</div>
+
+<script>
+let stockId = 0;
+const stocks = []; // {id, name, shares}
+
+function addStockRow(name='', shares=''){
+  const id = stockId++;
+  stocks.push({id, name, shares});
+  renderStockRows();
+}
+function removeStockRow(id){
+  const idx = stocks.findIndex(s=>s.id===id);
+  if(idx>-1) stocks.splice(idx,1);
+  renderStockRows();
+}
+function renderStockRows(){
+  const box = document.getElementById('stockRows');
+  const note = document.getElementById('emptyStockNote');
+  note.style.display = stocks.length ? 'none' : 'block';
+  box.innerHTML = stocks.map(s=>`
+    <div class="stock-row" data-id="${s.id}">
+      <input class="s-name" placeholder="종목명 (예: VOO)" value="${s.name}" oninput="updateStock(${s.id},'name',this.value)">
+      <input class="s-shares" type="number" placeholder="보유 수량" value="${s.shares}" inputmode="numeric" oninput="updateStock(${s.id},'shares',this.value)">
+      <button class="s-remove" onclick="removeStockRow(${s.id})">×</button>
+    </div>
+  `).join('');
+}
+function updateStock(id, field, value){
+  const s = stocks.find(s=>s.id===id);
+  if(s) s[field] = field==='shares' ? Number(value) : value;
+}
+document.getElementById('addStockBtn').addEventListener('click', ()=>addStockRow());
+
+/* ---------- formatting ---------- */
+function formatManwon(won){
+  // returns "X,XXX만원" or "X만 Y천원"
+  const sign = won < 0 ? '-' : '';
+  won = Math.abs(won);
+  let man = won/10000;
+  let manInt = Math.floor(man);
+  let cheon = Math.round((man - manInt)*10);
+  if(cheon>=10){ manInt += 1; cheon = 0; }
+  const manStr = manInt.toLocaleString('ko-KR');
+  return cheon===0 ? `${sign}${manStr}만원` : `${sign}${manStr}만 ${cheon}천원`;
+}
+function formatEokWon(won){
+  const eok = Math.floor(won/1e8);
+  const rem = Math.round((won - eok*1e8)/10000);
+  if(eok>0 && rem>0) return `${eok}억 ${rem.toLocaleString('ko-KR')}만원`;
+  if(eok>0) return `${eok}억원`;
+  return `${rem.toLocaleString('ko-KR')}만원`;
+}
+
+/* ---------- core calculation ---------- */
+function calculate(){
+  const total = Number(document.getElementById('inTotal').value) * 1e8;
+  const r = Number(document.getElementById('inReturn').value)/100;
+  const g = Number(document.getElementById('inInflation').value)/100;
+  const D = Math.max(0, Math.floor(Number(document.getElementById('inDefer').value)||0));
+  const N = Math.max(1, Math.floor(Number(document.getElementById('inAccounts').value)||1));
+
+  const q = (1+g)/(1+r);
+  let B;
+  if(Math.abs(r-g) < 1e-9){
+    B = total / (N * Math.pow(q, D));
+  } else {
+    B = total * (1-q) / (Math.pow(q,D) * (1 - Math.pow(q,N)));
+  }
+
+  const accounts = [];
+  for(let n=1; n<=N; n++){
+    const t = D + n - 1;
+    const annualNominal = B * Math.pow(1+g, t);
+    const initialAlloc = annualNominal / Math.pow(1+r, t);
+    const monthlyNominal = annualNominal/12;
+    accounts.push({n, t, annualNominal, initialAlloc, monthlyNominal});
+  }
+
+  // stock share allocation
+  const totalAllocSum = accounts.reduce((s,a)=>s+a.initialAlloc,0);
+  const stockAlloc = {}; // stockId -> array of shares per account index
+  stocks.forEach(st=>{
+    if(!st.shares || st.shares<=0 || !st.name) return;
+    const per = accounts.map(a=> Math.floor(st.shares * (a.initialAlloc/totalAllocSum)) );
+    const assigned = per.reduce((s,v)=>s+v,0);
+    const remainder = st.shares - assigned;
+    per[0] += remainder; // leftover goes to account 1
+    stockAlloc[st.id] = per;
+  });
+
+  return {total, r, g, D, N, B, accounts, stockAlloc, totalAllocSum};
+}
+
+/* ---------- rendering ---------- */
+function renderLadder(result){
+  const box = document.getElementById('ladderChart');
+  const max = Math.max(...result.accounts.map(a=>a.annualNominal));
+  box.innerHTML = result.accounts.map((a,i)=>{
+    const h = Math.max(6, Math.round((a.annualNominal/max)*78));
+    const mix = i/(result.accounts.length-1 || 1);
+    const color = mixColor('#2F6F5E', '#D8C282', mix);
+    const isFirst = a.n===1;
+    return `<div class="ladder-bar${isFirst?' buffer-mark':''}" style="height:${h}px;background:${color};"></div>`;
+  }).join('');
+  document.getElementById('ladderStart').textContent = result.D===0 ? '지금' : `${result.D}년 뒤`;
+  const lastT = result.accounts[result.accounts.length-1].t;
+  document.getElementById('ladderEnd').textContent = lastT===0 ? '지금' : `${lastT}년 뒤`;
+}
+function mixColor(c1,c2,t){
+  const p = c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+  const [r1,g1,b1]=p(c1), [r2,g2,b2]=p(c2);
+  const r=Math.round(r1+(r2-r1)*t), g=Math.round(g1+(g2-g1)*t), b=Math.round(b1+(b2-b1)*t);
+  return `rgb(${r},${g},${b})`;
+}
+
+function renderSummary(result){
+  document.getElementById('sumTotal').textContent = formatEokWon(result.total);
+  document.getElementById('sumDefer').textContent = `거치기간 ${result.D}년 · 계좌 ${result.N}개`;
+
+  document.getElementById('sumRealMonthly').textContent = formatManwon(result.B/12);
+  document.getElementById('sumRealAnnual').textContent = `연 ${formatManwon(result.B)} · 오늘 기준 구매력`;
+
+  const first = result.accounts[0];
+  document.getElementById('sumFirstMonthly').textContent = formatManwon(first.monthlyNominal);
+  document.getElementById('sumFirstAnnual').textContent = `연 ${formatManwon(first.annualNominal)} · 첫 인출`;
+
+  const last = result.accounts[result.accounts.length-1];
+  document.getElementById('sumLastLabel').textContent = last.t===0 ? '지금 월 인출액' : `${last.t}년 뒤 월 인출액`;
+  document.getElementById('sumLastMonthly').textContent = formatManwon(last.monthlyNominal);
+  document.getElementById('sumLastAnnual').textContent = `연 ${formatManwon(last.annualNominal)} · 마지막 인출`;
+}
+
+function renderList(result){
+  const totalAllocSum = result.accounts.reduce((s,a)=>s+a.initialAlloc,0);
+  const totalWithdrawSum = result.accounts.reduce((s,a)=>s+a.annualNominal,0);
+  document.getElementById('totalAlloc').textContent = formatEokWon(totalAllocSum);
+  document.getElementById('totalWithdraw').textContent = formatEokWon(totalWithdrawSum);
+
+  const activeStocks = stocks.filter(s=>s.shares>0 && s.name);
+
+  const html = result.accounts.map((a, idx)=>{
+    const timing = a.t===0 ? '지금(연초)' : `${a.t}년 뒤`;
+
+    const ruleText = a.t===0
+      ? `이 계좌는 지금 바로 인출하는 계좌라 초기 배분금액과 연 인출액이 같아요.`
+      : `이 계좌는 지금부터 <b>${a.t}년</b> 동안 연 <b>${(result.r*100).toFixed(1)}%</b>로 불어나, ${a.t}년 뒤 필요한 <b>${formatManwon(a.annualNominal)}</b>을 만드는 걸 목표로 계산돼요. 그래서 지금은 그보다 적은 <b>${formatManwon(a.initialAlloc)}</b>만 배분됩니다.`;
+
+    let stockDetail = '';
+    if(activeStocks.length){
+      stockDetail = activeStocks.map(st=>{
+        const sh = result.stockAlloc[st.id] ? result.stockAlloc[st.id][idx] : 0;
+        return `<div class="acc-detail-row"><span>${st.name}</span><b>${sh.toLocaleString('ko-KR')}주</b></div>`;
+      }).join('');
+    }
+    const detail = `<div class="acc-detail">
+        <div class="acc-explain">${ruleText}</div>
+        ${stockDetail}
+      </div>`;
+    return `
+    <div class="acc-card${a.n===1?' current':''}" onclick="this.classList.toggle('open')">
+      <div class="acc-top">
+        <div class="acc-badge"><span class="acc-num">${a.n}</span><span class="acc-timing">${timing}</span></div>
+        <span class="acc-chevron">▾</span>
+      </div>
+      <div class="acc-stats">
+        <div><div class="k">초기 배분금액</div><div class="v">${formatManwon(a.initialAlloc)}</div></div>
+        <div><div class="k">연 인출액(명목)</div><div class="v">${formatManwon(a.annualNominal)}</div></div>
+        <div><div class="k">월 인출액(명목)</div><div class="v">${formatManwon(a.monthlyNominal)}</div></div>
+      </div>
+      ${detail}
+    </div>`;
+  }).join('');
+  document.getElementById('resultList').innerHTML = html;
+}
+
+function updateHeroLabels(result){
+  document.getElementById('heroEyebrow').textContent = `Withdrawal Ladder · ${result.N}YR Plan`;
+  document.getElementById('heroTitle').innerHTML = `${result.N}년 인출 사다리<br><span>계좌 분산 계산기</span>`;
+}
+
+/* ---------- guardrail ---------- */
+function computeGuardrail(result){
+  const bufferYears = Number(document.getElementById('inBufferYears').value)||0;
+  const bufferBalance = (Number(document.getElementById('inBufferBalance').value)||0) * 10000; // 만원 -> 원
+  const lowerGuard = (Number(document.getElementById('inLowerGuard').value)||0)/100;
+  const upperGuard = (Number(document.getElementById('inUpperGuard').value)||0)/100;
+  const cutPct = (Number(document.getElementById('inCutPct').value)||0)/100;
+  const raisePct = (Number(document.getElementById('inRaisePct').value)||0)/100;
+
+  const currentAnnual = result.accounts[0].annualNominal; // "지금" 인출 계좌의 연 인출액(명목)
+  const targetBuffer = currentAnnual * bufferYears;
+  const ratio = targetBuffer>0 ? bufferBalance/targetBuffer : 0;
+
+  let status, badgeClass, adjustedAnnual, note;
+  if(targetBuffer<=0){
+    status = '목표 버퍼 미설정';
+    badgeClass = 'normal';
+    adjustedAnnual = currentAnnual;
+    note = `목표 버퍼 년치를 0보다 크게 입력하면 가드레일 점검이 가능해요.`;
+  } else if(ratio < lowerGuard){
+    status = '하한 가드레일 발동';
+    badgeClass = 'cut';
+    adjustedAnnual = currentAnnual * (1-cutPct);
+    note = `버퍼가 목표의 ${(ratio*100).toFixed(0)}%까지 줄었어요. 이번 해 인출액을 ${(cutPct*100).toFixed(0)}% 줄이는 걸 권장해요.`;
+  } else if(ratio > upperGuard){
+    status = '상한 가드레일 발동';
+    badgeClass = 'raise';
+    adjustedAnnual = currentAnnual * (1+raisePct);
+    note = `버퍼가 목표의 ${(ratio*100).toFixed(0)}%로 여유가 있어요. 이번 해 인출액을 ${(raisePct*100).toFixed(0)}% 늘려도 괜찮아요.`;
+  } else {
+    status = '정상 범위';
+    badgeClass = 'normal';
+    adjustedAnnual = currentAnnual;
+    note = `버퍼가 목표 대비 ${(ratio*100).toFixed(0)}% 수준으로 정상 범위예요. 계획대로 인출하세요.`;
+  }
+  return {bufferYears, bufferBalance, targetBuffer, ratio, status, badgeClass, adjustedAnnual, currentAnnual, note};
+}
+
+function renderGuardrail(gr){
+  const box = document.getElementById('guardrailResult');
+  box.innerHTML = `
+    <span class="gr-badge ${gr.badgeClass}">${gr.status}</span>
+    <div class="gr-row"><span>목표 버퍼 (${gr.bufferYears}년치)</span><b>${formatManwon(gr.targetBuffer)}</b></div>
+    <div class="gr-row"><span>현재 버퍼 잔액</span><b>${formatManwon(gr.bufferBalance)}</b></div>
+    <div class="gr-row"><span>버퍼 비율</span><b>${(gr.ratio*100).toFixed(0)}%</b></div>
+    <p style="font-size:12px;color:var(--ink-soft);line-height:1.6;margin:8px 0 0;">${gr.note}</p>
+    <div class="gr-final">
+      <span class="k">가드레일 반영 권장 인출액 (연 / 월)</span>
+      <span class="v">${formatManwon(gr.adjustedAnnual)} / ${formatManwon(gr.adjustedAnnual/12)}</span>
+    </div>
+  `;
+}
+
+let lastResult = null;
+function runCalculation(){
+  lastResult = calculate();
+  updateHeroLabels(lastResult);
+  renderLadder(lastResult);
+  renderSummary(lastResult);
+  renderList(lastResult);
+  lastResult.guardrail = computeGuardrail(lastResult);
+  renderGuardrail(lastResult.guardrail);
+}
+
+document.getElementById('calcBtn').addEventListener('click', runCalculation);
+
+['inBufferYears','inBufferBalance','inLowerGuard','inCutPct','inUpperGuard','inRaisePct'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{
+    if(lastResult){
+      lastResult.guardrail = computeGuardrail(lastResult);
+      renderGuardrail(lastResult.guardrail);
+    }
+  });
+});
+
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  if(!lastResult) runCalculation();
+  const r = lastResult;
+  const activeStocks = stocks.filter(s=>s.shares>0 && s.name);
+  let lines = [];
+  lines.push(`[30년 인출 사다리 계산 결과]`);
+  lines.push(`총 투입금액 ${formatEokWon(r.total)} · 거치기간 ${r.D}년 · 계좌 ${r.N}개`);
+  lines.push(`연 수익률 ${(r.r*100).toFixed(1)}% · 물가상승률 ${(r.g*100).toFixed(1)}%`);
+  lines.push('');
+  r.accounts.forEach((a,idx)=>{
+    const timing = a.t===0 ? '지금(연초)' : `${a.t}년 뒤`;
+    let extra = '';
+    if(activeStocks.length){
+      extra = ' | ' + activeStocks.map(st=>`${st.name} ${(r.stockAlloc[st.id]?r.stockAlloc[st.id][idx]:0).toLocaleString('ko-KR')}주`).join(', ');
+    }
+    lines.push(`${a.n}번 | ${timing} | 초기배분 ${formatManwon(a.initialAlloc)} | 연 ${formatManwon(a.annualNominal)} | 월 ${formatManwon(a.monthlyNominal)}${extra}`);
+  });
+  const totalAllocSum = r.accounts.reduce((s,a)=>s+a.initialAlloc,0);
+  const totalWithdrawSum = r.accounts.reduce((s,a)=>s+a.annualNominal,0);
+  lines.push('');
+  lines.push(`합계: ${formatEokWon(totalAllocSum)} / ${formatEokWon(totalWithdrawSum)}`);
+
+  if(r.guardrail){
+    const gr = r.guardrail;
+    lines.push('');
+    lines.push(`[가드레일 체크] ${gr.status} (버퍼 비율 ${(gr.ratio*100).toFixed(0)}%)`);
+    lines.push(`목표 버퍼 ${formatManwon(gr.targetBuffer)} · 현재 버퍼 ${formatManwon(gr.bufferBalance)}`);
+    lines.push(`권장 인출액: 연 ${formatManwon(gr.adjustedAnnual)} / 월 ${formatManwon(gr.adjustedAnnual/12)}`);
+  }
+
+  const text = lines.join('\n');
+
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>{
+      flashCopyBtn();
+    }).catch(()=>fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+});
+function fallbackCopy(text){
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); flashCopyBtn(); }catch(e){}
+  document.body.removeChild(ta);
+}
+function flashCopyBtn(){
+  const btn = document.getElementById('copyBtn');
+  const orig = btn.textContent;
+  btn.textContent = '복사됨 ✓';
+  setTimeout(()=>{ btn.textContent = orig; }, 1400);
+}
+
+// init
+runCalculation();
+</script>
+</body>
+</html>
