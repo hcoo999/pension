@@ -135,24 +135,10 @@
 <div class="wrap">
   <header>
     <div class="eyebrow">은퇴설계 · 종합 시뮬레이터</div>
-    <h1>국민연금·연금저축·퇴직IRP·일반계좌<br>연령별 세후 현금흐름·잔액 계산기</h1>
-    <div class="sub">금액을 입력하면 월 실수령액뿐 아니라, 나이가 들면서 계좌 잔액과 세후 소득이 어떻게 변하는지 함께 보여줍니다. 입력값은 이 브라우저에 자동 저장되어 다음에 다시 열어도 그대로 남아 있습니다.</div>
+    <h1>연령별 세후 현금흐름·잔액 계산</h1>
+    <div class="sub">국민연금·연금저축·퇴직IRP·일반계좌등의 금액을 입력하면 월 실수령액, 나이별 계좌 잔액과 세후 소득이 어떻게 변하는지 보여줍니다. 입력값은 자동 저장되어 그대로 남아 다음에 사용할 수 있습니다.</div>
     <div class="savebadge"><span class="dotpulse"></span><span id="saveStatus">저장됨</span></div>
   </header>
-
-  <div id="captureArea">
-  <div class="aibox">
-    <div class="aititle">✦ AI 요약</div>
-    <ul id="aiSummaryList"><li>계산 중...</li></ul>
-  </div>
-  </div>
-
-  <div class="section" style="padding:10px 12px;margin-bottom:14px;">
-    <div class="share-row">
-      <button class="btn-secondary" id="btn-saveimg" style="margin-top:0;">🖼 이미지로 저장</button>
-      <button class="btn-secondary" id="btn-sharelink" style="margin-top:0;">🔗 공유 링크 복사</button>
-    </div>
-  </div>
 
   <div class="tabbar">
     <button class="active" data-tab="input">① 입력</button>
@@ -253,9 +239,9 @@
     <div class="section">
       <div class="section-h"><span class="dot" style="background:var(--ink)"></span><h2>건강보험</h2></div>
       <div class="toggle-row">
-        <button id="btn-dependent" class="active">피부양자</button>
+        <button id="btn-dependent">피부양자</button>
         <button id="btn-workplace">직장가입자</button>
-        <button id="btn-region">지역가입자</button>
+        <button id="btn-region" class="active">지역가입자</button>
       </div>
       <div class="note">피부양자는 소득 요건 초과 시 지역가입자 기준으로 자동 전환되어 계산됩니다.</div>
     </div>
@@ -269,7 +255,7 @@
           <div class="opt-row"><span>최적화 전 예상 세금(전체기간 합계)</span><span id="opt-before">-</span></div>
           <div class="opt-row"><span>최적화 후 예상 세금(전체기간 합계)</span><span id="opt-after">-</span></div>
           <div class="opt-row"><span>절감액</span><span class="save" id="opt-save">-</span></div>
-          <div class="note" style="margin-top:6px;">각 나이 구간(개시~59 / 60~64 / 65~74 / 75세 이후)의 연금저축·퇴직IRP 인출액이 자동으로 재배분되었습니다. 아래 입력값이 갱신된 것을 확인하세요. 잔고 변화를 반영해 한 번 더 눌러 재계산할 수 있습니다.</div>
+          <div class="note" style="margin-top:6px;" id="optDetailNote">-</div>
         </div>
       </div>
     </div>
@@ -281,6 +267,13 @@
 
   <!-- ===== TAB: NOW ===== -->
   <div class="tabpage" id="tab-now">
+    <div id="captureArea">
+      <div class="aibox" id="aiBoxContainer">
+        <div class="aititle">✦ AI 요약</div>
+        <ul id="aiSummaryList"><li>계산 중...</li></ul>
+      </div>
+    </div>
+
     <div class="cards">
       <div class="cardbox"><div class="lbl">월 세전 합계</div><div class="num" id="c-total">-</div></div>
       <div class="cardbox"><div class="lbl">월 세금+건보료</div><div class="num" id="c-burden">-</div></div>
@@ -413,7 +406,7 @@
       <div class="section-h"><span class="dot" style="background:var(--danger)"></span><h2>⭐ Monte Carlo 시뮬레이션</h2></div>
       <div class="note">입력 탭에서 설정한 공통 수익률을 매년 고정값으로 쓰는 대신, 그 수익률을 평균으로 하되 해마다 무작위로(+18%, -22%, +7%처럼) 오르내리는 실제 시장처럼 여러 번(수천 회) 시뮬레이션합니다. 그 중 자산이 목표 나이까지 버틴 비율이 "성공확률"입니다.</div>
       <div class="row3" style="margin-top:12px;">
-        <div class="field"><label>연 변동성(표준편차)</label><div class="amt-input"><input type="number" inputmode="numeric" id="mcVolatility" value="15" step="1"><span>%</span></div></div>
+        <div class="field"><label>연 변동성</label><div class="amt-input"><input type="number" inputmode="numeric" id="mcVolatility" value="15" step="1"><span>%</span></div></div>
         <div class="field"><label>시뮬레이션 횟수</label>
           <select id="mcTrials" style="width:100%;border:1.5px solid var(--line);border-radius:8px;padding:11px 8px;font-family:'JetBrains Mono',monospace;font-size:13px;background:#fff;">
             <option value="1000">1,000</option>
@@ -448,6 +441,13 @@
     </div>
   </div>
 
+  <div class="section" style="padding:10px 12px;margin-bottom:14px;">
+    <div class="share-row">
+      <button class="btn-secondary" id="btn-saveimg" style="margin-top:0;">🖼 이미지로 저장</button>
+      <button class="btn-secondary" id="btn-sharelink" style="margin-top:0;">🔗 공유 링크 복사</button>
+    </div>
+  </div>
+
   <footer>
     가정: 국민연금을 제외한 모든 금액은 물가상승률을 반영하지 않은 명목가치(현재가치) 기준이며, 국민연금은 입력한 연간 증가율로 개시 이후 매년 복리 증가 · 인적공제 본인 150만원만 반영 · 공적연금소득공제 2024년 기준표 적용 · 사적연금(연금저축) 연 1,500만원 초과 시 전액 16.5% 분리과세 · 퇴직IRP는 연금수령 10년 이내 70%, 10년 초과 60%만 과세 · 연금수령한도 초과분은 연금저축 16.5%, 퇴직IRP는 감면 없는 전액 세율 · 사적연금 건보료 완전제외, 공적연금은 50% 산입 · 저율과세 세율은 매년 나이에 따라 자동 갱신(55~69세 5.5%, 70~79세 4.4%, 80세 이상 3.3%) · 연금저축·퇴직IRP·일반계좌는 모두 하나의 공통 예상 수익률로 잔고 변화를 근사 · 재산보험료·부양가족공제 등은 단순화해 제외 · 입력값은 이 기기의 브라우저 저장공간에만 보관되며 다른 기기·브라우저와 공유되지 않습니다. 실제 수치는 세무사·건보공단 확인이 필요합니다.
   </footer>
@@ -463,7 +463,7 @@ const defaultState = {
   pensionBalance:3000, pensionYear:1, pensionWithdrawNow:125, pensionWithdraw60:125, pensionWithdraw65:125, pensionWithdraw75:125,
   irpBalance:5000, irpYear:1, irpWithdrawNow:80, irpWithdraw60:80, irpWithdraw65:80, irpWithdraw75:80, retireTaxRate:6,
   generalBalance:30000, generalAmt:330, dividendRatio:100,
-  hiType:'dependent',
+  hiType:'region',
   mcVolatility:15, mcTrials:2000, fireHorizonAge:95
 };
 let state = Object.assign({}, defaultState);
@@ -959,12 +959,18 @@ function updateHealthChart(rows){
   healthChart.data.datasets[0].backgroundColor = colors;
   healthChart.update();
 
-  const lostRow = rows.find(r=>r.detail.dependentLost);
   const desc = document.getElementById('healthChartDesc');
-  if(lostRow){
-    desc.textContent = `${lostRow.age}세부터 피부양자 자격을 잃고 지역가입자로 전환되어 건강보험료가 발생할 것으로 예상됩니다(초록=피부양자·0원, 주황=자격상실 이후).`;
+  if(state.hiType==='dependent'){
+    const lostRow = rows.find(r=>r.detail.dependentLost);
+    if(lostRow){
+      desc.textContent = `${lostRow.age}세부터 피부양자 자격을 잃고 지역가입자로 전환되어 건강보험료가 발생할 것으로 예상됩니다(초록=피부양자·0원, 주황=자격상실 이후).`;
+    } else {
+      desc.textContent = '시뮬레이션 기간 내내 피부양자 자격을 유지할 것으로 예상됩니다(건강보험료 0원).';
+    }
+  } else if(state.hiType==='workplace'){
+    desc.textContent = '직장가입자 기준 건강보험료 변화 그래프입니다.';
   } else {
-    desc.textContent = '시뮬레이션 기간 내내 피부양자 자격을 유지할 것으로 예상됩니다(건강보험료 0원).';
+    desc.textContent = '지역가입자 기준 건강보험료 변화 그래프입니다.';
   }
 }
 
@@ -1004,11 +1010,12 @@ document.getElementById('btn-optimize').addEventListener('click', ()=>{
   const before = sumTaxOverHorizon(state);
   const baseline = runTimeline(state);
   const bands = [
-    {age:state.currentAge, priKey:'pensionWithdrawNow', irpKey:'irpWithdrawNow'},
-    {age:60, priKey:'pensionWithdraw60', irpKey:'irpWithdraw60'},
-    {age:65, priKey:'pensionWithdraw65', irpKey:'irpWithdraw65'},
-    {age:75, priKey:'pensionWithdraw75', irpKey:'irpWithdraw75'}
+    {age:state.currentAge, priKey:'pensionWithdrawNow', irpKey:'irpWithdrawNow', label:'개시~59세'},
+    {age:60, priKey:'pensionWithdraw60', irpKey:'irpWithdraw60', label:'60~64세'},
+    {age:65, priKey:'pensionWithdraw65', irpKey:'irpWithdraw65', label:'65~74세'},
+    {age:75, priKey:'pensionWithdraw75', irpKey:'irpWithdraw75', label:'75세 이후'}
   ];
+  let detailsText = '';
   bands.forEach(b=>{
     if(b.age<state.currentAge || b.age>state.endAge) return;
     const row = baseline.find(x=>x.age===b.age);
@@ -1018,15 +1025,19 @@ document.getElementById('btn-optimize').addEventListener('click', ()=>{
     const irpYearAtI = state.irpYear + i;
     const totalMonthly = state[b.priKey] + state[b.irpKey];
     if(totalMonthly<=0) return;
+    const oldPri = state[b.priKey];
+    const oldIrp = state[b.irpKey];
     const best = optimizeFraction(state, b.age, pensionYearAtI, irpYearAtI, row.balPriStart, row.balIrpStart, totalMonthly);
     state[b.priKey] = Math.round(best.priM);
     state[b.irpKey] = Math.round(best.irpM);
+    detailsText += `[${b.label}] 연금저축 ${oldPri}만→${state[b.priKey]}만 / 퇴직IRP ${oldIrp}만→${state[b.irpKey]}만\n`;
   });
   render();
   const after = sumTaxOverHorizon(state);
   document.getElementById('opt-before').textContent = fmtWon(before)+'만원';
   document.getElementById('opt-after').textContent = fmtWon(after)+'만원';
   document.getElementById('opt-save').textContent = fmtWon(before-after)+'만원 절감';
+  document.getElementById('optDetailNote').innerHTML = `각 나이 구간(개시~59 / 60~64 / 65~74 / 75세 이후)의 연금저축·퇴직IRP 인출액이 다음과 같이 재배분되었습니다.<br><pre style="margin:4px 0;font-family:'JetBrains Mono',monospace;font-size:11px;">${detailsText}</pre>잔고 변화를 반영해 한 번 더 눌러 재계산할 수 있습니다.`;
   document.getElementById('optResult').classList.add('show');
 });
 
