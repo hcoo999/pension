@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>고급 연금수령 시뮬레이터 (오류 수정 버전)</title>
+    <title>연금수령액 계산 </title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -12,6 +12,8 @@
             --net-income-color: #ff6600;
             --primary-color: #2c3e50;
         }
+        * { -webkit-tap-highlight-color: transparent; }
+        html { -webkit-text-size-adjust: 100%; }
         body {
             font-family: 'Malgun Gothic', sans-serif;
             margin: 20px;
@@ -71,16 +73,17 @@
             padding: 8px;
             border: 2px solid var(--input-border);
             border-radius: 4px;
-            font-size: 0.9rem;
+            font-size: 16px;
             box-sizing: border-box;
             text-align: right;
         }
         select { text-align-last: center; }
         
+        .target-table-wrapper { overflow: auto; margin-top: 10px; max-width: 100%; }
         .target-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 0;
         }
         .target-table th, .target-table td {
             border: 1px solid #ddd;
@@ -89,6 +92,26 @@
         }
         .target-table th { background-color: #f2f2f2; font-size: 0.85rem;}
         .target-table input { width: 90%; text-align: right; border: 1px solid var(--input-border);}
+
+        /* 구분행(헤더) 및 첫 열 고정(frozen) */
+        .target-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+        }
+        .target-table th:first-child,
+        .target-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background-color: #fdfdfd;
+            white-space: nowrap;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+        }
+        .target-table thead th:first-child {
+            z-index: 4;
+            background-color: #f2f2f2;
+        }
 
         .btn-container {
             display: flex;
@@ -139,6 +162,8 @@
         }
 
         .table-wrapper { overflow-x: auto; }
+        .scroll-hint { display: none; font-size: 0.75rem; color: #888; text-align: right; margin-bottom: 4px; }
+        @media (max-width: 768px) { .scroll-hint { display: block; } }
         .result-table {
             width: 100%;
             border-collapse: collapse;
@@ -154,10 +179,100 @@
             text-align: center;
             position: sticky;
             top: 0;
+            z-index: 2;
+        }
+        /* 첫 행(헤더) 및 첫 열(연령) 고정(frozen) */
+        .result-table th:first-child,
+        .result-table td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background-color: #fff;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.08);
+        }
+        .result-table th:first-child {
+            z-index: 3;
+            background-color: #ebedef;
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .net-amount { color: var(--net-income-color); font-weight: bold; }
+
+        @media (max-width: 768px) {
+            body { margin: 0; }
+            .container {
+                max-width: 100%;
+                padding: 14px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            h1 { font-size: 1.3rem; margin-bottom: 16px; }
+            h2 { font-size: 1.1rem; }
+            .section { padding: 12px; margin-bottom: 16px; }
+            .section-title { font-size: 1rem; }
+
+            /* 입력 영역: 가로 스크롤 대신 세로로 쌓기 */
+            .flex-row {
+                flex-wrap: wrap;
+                overflow-x: visible;
+            }
+            .form-group {
+                flex: 1 1 calc(50% - 10px);
+                min-width: 0;
+            }
+            .form-group.wide,
+            .flex-row > .form-group:first-child {
+                flex: 1 1 100% !important;
+            }
+            .form-group.narrow {
+                flex: 1 1 calc(33.333% - 8px);
+                min-width: 0;
+            }
+
+            label { font-size: 0.75rem; white-space: normal; }
+            input, select { padding: 8px 4px; font-size: 15px; }
+
+            /* 구간별 희망연금 표: 가로 스크롤 허용 */
+            .target-table { white-space: nowrap; }
+            .target-table th, .target-table td { padding: 6px; font-size: 0.8rem; }
+            .target-table input { width: 80px; }
+
+            /* 버튼 영역: 세로로 쌓고 터치하기 쉽게 */
+            .btn-container {
+                flex-direction: column;
+                gap: 10px;
+                margin: 16px 0;
+            }
+            .btn {
+                width: 100%;
+                padding: 14px;
+                box-sizing: border-box;
+            }
+
+            /* 요약 박스: 세로로 쌓기 */
+            .summary-box {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                font-size: 0.95rem;
+            }
+
+            /* 차트: 세로로 쌓고 높이 축소 */
+            .chart-container { flex-direction: column; gap: 14px; }
+            .chart-box { min-width: 0; width: 100%; height: 240px; padding: 8px; }
+
+            /* 결과 표: 가로 스크롤, 폰트 축소, 스크롤 유도 */
+            .table-wrapper {
+                -webkit-overflow-scrolling: touch;
+            }
+            .result-table { font-size: 0.75rem; }
+            .result-table th, .result-table td { padding: 5px 4px; }
+        }
+
+        @media (max-width: 420px) {
+            .form-group { flex: 1 1 100%; }
+            .form-group.narrow { flex: 1 1 calc(33.333% - 8px); }
+        }
 
         @media print {
             body { background: white; margin: 0; padding: 10px; font-size: 11px; }
@@ -173,10 +288,10 @@
 <body>
 
 <div class="container">
-    <h1>고급 연금수령 시뮬레이터</h1>
+    <h1>연금수령액 계산</h1>
     
     <div class="section">
-        <div class="section-title">1. 계좌 정보 및 기본 변수 설정</div>
+        <div class="section-title">1. 계좌 및 기본 정보 설정</div>
         <div class="flex-row" style="margin-bottom: 15px;">
             <div class="form-group" style="flex: 1.5; min-width: 120px;">
                 <label>계좌구분</label>
@@ -221,8 +336,9 @@
     </div>
 
     <div class="section">
-        <div class="section-title">2. 수령나이별 희망 연금액 직접 지정 (최대 5개 구간)</div>
-        <p style="font-size:0.8rem; color:#666; margin-top:-10px;">* 해당 연령대부터 다음 지정 연령 전까지 적용됩니다. (입력 단위: 만원, 선택한 수령방법 기준 금액)</p>
+        <div class="section-title">2. 나이별 희망 연금액 지정</div>
+        <p style="font-size:0.8rem; color:#666; margin-top:-10px;">* 해당 연령대부터 다음 연령 전까지 적용. (입력 단위: 만원)</p>
+        <div class="target-table-wrapper">
         <table class="target-table">
             <thead>
                 <tr>
@@ -236,7 +352,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>수령개시연령 (세)</strong></td>
+                    <td><strong>개시연령(세)</strong></td>
                     <td><input type="number" id="targetAge1" value="55"></td>
                     <td><input type="number" id="targetAge2" value="65"></td>
                     <td><input type="number" id="targetAge3" value="75"></td>
@@ -244,21 +360,20 @@
                     <td><input type="number" id="targetAge5" value=""></td>
                 </tr>
                 <tr>
-                    <td><strong>희망 연금액 (만원)</strong></td>
-                    <td><input type="text" id="targetAmt1" value="2,000" oninput="formatInputMoney(this)"></td>
-                    <td><input type="text" id="targetAmt2" value="1,500" oninput="formatInputMoney(this)"></td>
-                    <td><input type="text" id="targetAmt3" value="1,000" oninput="formatInputMoney(this)"></td>
-                    <td><input type="text" id="targetAmt4" value="" oninput="formatInputMoney(this)"></td>
-                    <td><input type="text" id="targetAmt5" value="" oninput="formatInputMoney(this)"></td>
+                    <td><strong>연금액(만원)</strong></td>
+                    <td><input type="text" inputmode="numeric" pattern="[0-9,]*" id="targetAmt1" value="2,000" oninput="formatInputMoney(this)"></td>
+                    <td><input type="text" inputmode="numeric" pattern="[0-9,]*" id="targetAmt2" value="1,500" oninput="formatInputMoney(this)"></td>
+                    <td><input type="text" inputmode="numeric" pattern="[0-9,]*" id="targetAmt3" value="1,000" oninput="formatInputMoney(this)"></td>
+                    <td><input type="text" inputmode="numeric" pattern="[0-9,]*" id="targetAmt4" value="" oninput="formatInputMoney(this)"></td>
+                    <td><input type="text" inputmode="numeric" pattern="[0-9,]*" id="targetAmt5" value="" oninput="formatInputMoney(this)"></td>
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
 
     <div class="btn-container">
         <button class="btn btn-primary" onclick="runSimulation()">시뮬레이션 실행</button>
-        <button class="btn btn-excel" onclick="exportToExcel()">Excel 저장 및 열기</button>
-        <button class="btn btn-print" onclick="window.print()">보고서 인쇄</button>
     </div>
 
     <div id="resultSection" style="display: none;">
@@ -275,11 +390,17 @@
             <div class="chart-box"><canvas id="pensionChart"></canvas></div>
         </div>
 
+        <div class="scroll-hint">← 좌우로 스크롤하여 전체 표 확인 →</div>
         <div class="table-wrapper">
             <table class="result-table" id="simulationTable">
                 <thead id="tableHeader"></thead>
                 <tbody id="tableBody"></tbody>
             </table>
+        </div>
+
+        <div class="btn-container">
+            <button class="btn btn-excel" onclick="exportToExcel()">Excel 저장 및 열기</button>
+            <button class="btn btn-print" onclick="window.print()">보고서 인쇄</button>
         </div>
     </div>
 </div>
@@ -318,18 +439,18 @@
             html = `
                 <div class="form-group wide">
                     <label>현재평가액 (만원)</label>
-                    <input type="text" id="initAsset" value="50,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="initAsset" value="50,000" oninput="formatInputMoney(this)">
                 </div>
             `;
         } else if (type === '퇴직IRP') {
             html = `
                 <div class="form-group wide">
                     <label>퇴직원금 (만원)</label>
-                    <input type="text" id="irpPrincipal" value="30,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="irpPrincipal" value="30,000" oninput="formatInputMoney(this)">
                 </div>
                 <div class="form-group wide">
                     <label>운용수익 (만원)</label>
-                    <input type="text" id="irpGain" value="10,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="irpGain" value="10,000" oninput="formatInputMoney(this)">
                 </div>
                 <div class="form-group wide">
                     <label>퇴직소득세율 (%)</label>
@@ -340,15 +461,15 @@
             html = `
                 <div class="form-group wide">
                     <label>세액공제 받은 원금 (만원)</label>
-                    <input type="text" id="taxDedAmt" value="3,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="taxDedAmt" value="3,000" oninput="formatInputMoney(this)">
                 </div>
                 <div class="form-group wide">
                     <label>세액공제 안받은 원금 (만원)</label>
-                    <input type="text" id="noTaxDedAmt" value="2,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="noTaxDedAmt" value="2,000" oninput="formatInputMoney(this)">
                 </div>
                 <div class="form-group wide">
                     <label>운용수익 (만원)</label>
-                    <input type="text" id="savingGain" value="1,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="savingGain" value="1,000" oninput="formatInputMoney(this)">
                 </div>
             `;
         }
@@ -573,7 +694,7 @@
             }
 
             document.getElementById('resultSection').style.display = 'block';
-            document.getElementById('resultTitle').innerText = `예상연금 수령액 (${payFreq} 수령 방식 기준)`;
+            document.getElementById('resultTitle').innerText = `예상연금 수령액 (${payFreq} 수령)`;
             
             document.getElementById('summaryAge').innerText = depletionAge;
             document.getElementById('summaryTotal').innerText = formatMoney(accumulatedTotalReceipt) + " 만원";
@@ -596,12 +717,12 @@
             <tr>
                 <th>연령</th>
                 <th>년도</th>
-                <th>세전연금</th>
-                <th>세후연금</th>
-                <th>세금(년)</th>
-                <th>세전연간수령액</th>
-                <th>전적립금 (만원)</th>
-                <th>후적립금 (만원)</th>
+                <th>세전연금<br>(만원)</th>
+                <th>세후연금<br>(만원)</th>
+                <th>세금<br>(만원/년)</th>
+                <th>세전연간수령액<br>(만원)</th>
+                <th>전적립금<br>(만원)</th>
+                <th>후적립금<br>(만원)</th>
                 <th>인출률</th>
                 <th>비고</th>
             </tr>
@@ -682,7 +803,7 @@
 
         const accountType = document.getElementById('accountType').value;
         const excelRows = [
-            ["연령", "년도", "세전연금", "세후연금", "세금(연)", "세전연간수령액", "전적립금(만원)", "후적립금(만원)", "인출률", "비고"]
+            ["연령", "년도", "세전연금(만원)", "세후연금(만원)", "세금(만원/년)", "세전연간수령액(만원)", "전적립금(만원)", "후적립금(만원)", "인출률", "비고"]
         ];
 
         computedData.forEach(row => {
