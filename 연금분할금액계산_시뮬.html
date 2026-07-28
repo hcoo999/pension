@@ -211,7 +211,6 @@
             .section { padding: 12px; margin-bottom: 16px; }
             .section-title { font-size: 1rem; }
 
-            /* 입력 영역: 가로 스크롤 대신 세로로 쌓기 */
             .flex-row {
                 flex-wrap: wrap;
                 overflow-x: visible;
@@ -232,12 +231,10 @@
             label { font-size: 0.75rem; white-space: normal; }
             input, select { padding: 8px 4px; font-size: 15px; }
 
-            /* 구간별 희망연금 표: 가로 스크롤 허용 */
             .target-table { white-space: nowrap; }
             .target-table th, .target-table td { padding: 6px; font-size: 0.8rem; }
             .target-table input { width: 80px; }
 
-            /* 버튼 영역: 세로로 쌓고 터치하기 쉽게 */
             .btn-container {
                 flex-direction: column;
                 gap: 10px;
@@ -249,7 +246,6 @@
                 box-sizing: border-box;
             }
 
-            /* 요약 박스: 세로로 쌓기 */
             .summary-box {
                 flex-direction: column;
                 gap: 10px;
@@ -257,11 +253,9 @@
                 font-size: 0.95rem;
             }
 
-            /* 차트: 세로로 쌓고 높이 축소 */
             .chart-container { flex-direction: column; gap: 14px; }
             .chart-box { min-width: 0; width: 100%; height: 240px; padding: 8px; }
 
-            /* 결과 표: 가로 스크롤, 폰트 축소, 스크롤 유도 */
             .table-wrapper {
                 -webkit-overflow-scrolling: touch;
             }
@@ -323,16 +317,16 @@
             </div>
             <div class="form-group narrow">
                 <label>물가상승률 (%)</label>
-                <input type="number" id="inflationRate" step="0.1" value="2.0">
+                <input type="number" id="inflationRate" step="0.1" value="2.5">
             </div>
             <div class="form-group narrow">
                 <label>운용이율 (%)</label>
-                <input type="number" id="investmentRate" step="0.1" value="4.0">
+                <input type="number" id="investmentRate" step="0.1" value="5.0">
             </div>
         </div>
 
         <div class="flex-row" id="dynamicInputRow">
-            </div>
+        </div>
     </div>
 
     <div class="section">
@@ -382,7 +376,7 @@
         <div class="summary-box">
             <div class="summary-item">자산 고갈 나이: <span id="summaryAge">-</span></div>
             <div class="summary-item">총 수령액(세후): <span id="summaryTotal">-</span></div>
-            <div class="summary-item">최종 잔액 (110세/고갈시): <span id="summaryFinal">-</span></div>
+            <div class="summary-item">최종 잔액 (100세/고갈시): <span id="summaryFinal">-</span></div>
         </div>
 
         <div class="chart-container">
@@ -421,7 +415,6 @@
 
     function parseMoney(val) {
         if(!val) return 0;
-        // 쉼표 등 숫자가 아닌 문자 전면 청소 후 파싱 수행
         let clearVal = val.toString().replace(/,/g, '').trim();
         return parseFloat(clearVal) || 0;
     }
@@ -439,7 +432,7 @@
             html = `
                 <div class="form-group wide">
                     <label>현재평가액 (만원)</label>
-                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="initAsset" value="50,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="initAsset" value="30,000" oninput="formatInputMoney(this)">
                 </div>
             `;
         } else if (type === '퇴직IRP') {
@@ -461,7 +454,7 @@
             html = `
                 <div class="form-group wide">
                     <label>세액공제 받은 원금 (만원)</label>
-                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="taxDedAmt" value="3,000" oninput="formatInputMoney(this)">
+                    <input type="text" inputmode="numeric" pattern="[0-9,]*" id="taxDedAmt" value="8,000" oninput="formatInputMoney(this)">
                 </div>
                 <div class="form-group wide">
                     <label>세액공제 안받은 원금 (만원)</label>
@@ -496,7 +489,6 @@
             const accountType = document.getElementById('accountType').value;
             const currentAge = parseInt(document.getElementById('currentAge').value) || 0;
             const startAge = parseInt(document.getElementById('startAge').value) || 0;
-            const duration = parseInt(document.getElementById('duration').value) || 0;
             const payFreq = document.getElementById('payFrequency').value;
             const inflationRate = (parseFloat(document.getElementById('inflationRate').value) || 0) / 100;
             const investmentRate = (parseFloat(document.getElementById('investmentRate').value) || 0) / 100;
@@ -510,11 +502,14 @@
             let lastTargetAmt = 0; 
 
             let totalAsset = 0;
+            let genP = 0, genG = 0; // 일반계좌 원금 및 운용수익 추적
             let irpP = 0, irpG = 0, irpTaxRate = 0;
             let saDed = 0, saNoDed = 0, saGain = 0;
 
             if(accountType === '일반') {
                 totalAsset = parseMoney(document.getElementById('initAsset').value);
+                genP = totalAsset;
+                genG = 0;
             } else if(accountType === '퇴직IRP') {
                 irpP = parseMoney(document.getElementById('irpPrincipal').value);
                 irpG = parseMoney(document.getElementById('irpGain').value);
@@ -530,16 +525,20 @@
             computedData = [];
             let accumulatedTotalReceipt = 0;
             let isDepleted = false;
-            let depletionAge = '110세 이상 또는 미고갈';
+            let depletionAge = '100세 이상 또는 미고갈';
 
-            for (let age = currentAge; age <= 110; age++) {
+            // 최대 100세까지 계산 수행
+            for (let age = currentAge; age <= 100; age++) {
                 let year = currentYear + (age - currentAge);
                 let beforeAsset = totalAsset;
 
                 if (age > currentAge && totalAsset > 0) {
                     beforeAsset = totalAsset * (1 + investmentRate);
                     
-                    if(accountType === '퇴직IRP') {
+                    if (accountType === '일반') {
+                        let interest = beforeAsset - totalAsset;
+                        genG += interest;
+                    } else if(accountType === '퇴직IRP') {
                         let ratioP = totalAsset > 0 ? irpP / totalAsset : 0;
                         irpP = beforeAsset * ratioP;
                         irpG = beforeAsset * (1 - ratioP);
@@ -553,6 +552,7 @@
                     }
                 }
 
+                // 전적립금이 고갈되면 이후 계산 종료
                 if (age >= startAge && beforeAsset <= 0) {
                     if(!isDepleted) {
                         depletionAge = `${age - 1}세 고갈`;
@@ -566,7 +566,8 @@
                 let tax = 0;                
                 let note = "-";              
 
-                if (age >= startAge && age < startAge + duration) {
+                // 연금 개시 이후 구간 마지막 입력 인출금액으로 지속 계산
+                if (age >= startAge) {
                     if (targetMap[age] !== undefined) {
                         lastTargetAmt = targetMap[age];
                     }
@@ -579,7 +580,21 @@
                         preTaxPension = preTaxAnnual / freqFactor;
                     }
 
-                    if (accountType === '퇴직IRP') {
+                    if (accountType === '일반') {
+                        if (preTaxAnnual > 0) {
+                            let ratioG = beforeAsset > 0 ? (genG / beforeAsset) : 0;
+                            let gainExtracted = preTaxAnnual * ratioG;
+                            tax = gainExtracted * 0.154; // 이자/배당소득세 15.4%
+
+                            genG -= gainExtracted;
+                            genP -= (preTaxAnnual - gainExtracted);
+                            if (genG < 0) genG = 0;
+                            if (genP < 0) genP = 0;
+
+                            note = tax > 0 ? "이자소득세(15.4%)" : "비과세원금";
+                        }
+                    }
+                    else if (accountType === '퇴직IRP') {
                         let remainToExtract = preTaxAnnual;
                         let taxSum = 0;
                         let principalExtracted = 0;
@@ -688,8 +703,8 @@
                     note: note
                 });
 
-                if(age === 110 && afterAsset <= 0 && !isDepleted) {
-                    depletionAge = "110세 고갈";
+                if(age === 100 && afterAsset <= 0 && !isDepleted) {
+                    depletionAge = "100세 고갈";
                 }
             }
 
