@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>연금 수령액 시뮬레이터</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f0f4f8; --surface:#fff; --primary:#1a3a5c; --primary-l:#2563a8;
+  --accent:#d96a1a; --accent-dark:#b0520f; --danger:#cc2222; --success:#1e6b22;
+  --border:#cdd5e0; --text:#1a2533; --muted:#5a6a7e;
+  --shadow:0 2px 12px rgba(26,58,92,.10); --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Malgun Gothic','Apple SD Gothic Neo','맑은 고딕',sans-serif;
+  background:var(--bg);color:var(--text);
+  font-size:15px;min-height:100vh;line-height:1.4;
+}
+
+/* ── HEADER ── */
+.app-hdr{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-l) 100%);color:#fff;padding:20px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 12px rgba(26,58,92,.2)}
+.app-hdr h1{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.app-hdr .sub{font-size:12px;opacity:.8;margin-top:3px}
+
+/* ── CONTAINER & CARD ── */
+.container{max-width:1600px;margin:0 auto;padding:12px}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.card-title{font-size:15px;font-weight:800;color:var(--primary);border-left:4px solid var(--primary-l);padding-left:10px;margin-bottom:15px}
+
+.section-title{font-size:13px;font-weight:800;color:var(--primary-l);margin:12px 0 8px 0;padding-bottom:4px;border-bottom:1px dashed var(--border);}
+
+/* ── INPUT RESPONSIVE GRID ── */
+.input-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 10px;
+  padding-bottom: 6px;
+}
+@media (max-width: 768px) { .input-row { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 480px) {
+  .input-row { grid-template-columns: repeat(2, 1fr); }
+  .input-row .ig-wide { grid-column: span 2; }
+}
+
+.ig-pair-row{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ig-pair-row .ig{min-width:0}
+
+.ig{display:flex;flex-direction:column;gap:5px}
+.ig label{font-size:12px;font-weight:700;color:var(--text)}
+.ig input, .ig select{
+  border:2px solid var(--border);border-radius:6px;padding:8px;
+  font-size:14px;font-family:inherit;color:var(--text);background:#fff;outline:none;width:100%;
+}
+.ig input.required { border-color: var(--primary-l); }
+.ig input:focus, .ig select:focus{ border-color:var(--primary-l); box-shadow:0 0 0 3px rgba(37,99,168,.14); }
+
+/* ── SEGMENT ── */
+.seg-section{margin-top:16px}
+.seg-title{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;}
+.seg-list{ display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 8px; }
+@media (max-width: 480px) { .seg-list { grid-template-columns: 1fr; } }
+.seg-card{
+  border:1.5px solid var(--border);border-radius:8px;padding:10px;background:#f6f9ff;
+  display:flex;align-items:flex-end;gap:8px;
+}
+.seg-card .sg-ig{display:flex;flex-direction:column;gap:4px;flex:1}
+.seg-card .sg-ig label{font-size:11px;font-weight:700;color:var(--muted)}
+.seg-card .sg-ig input{ border:2px solid var(--border);border-radius:5px;padding:8px;font-size:13px;width:100%; }
+
+/* ── BUTTONS ── */
+.btn-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+@media (max-width: 768px) {
+  .btn-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 480px) {
+  .btn-grid { grid-template-columns: 1fr; }
+  .btn-grid.btn-grid-2col { grid-template-columns: repeat(2, 1fr); }
+}
+.btn-grid.btn-grid-2col{ grid-template-columns: repeat(2, 1fr); }
+
+.btn{padding:13px 16px;border:none;border-radius:7px;font-size:14px;font-weight:800;cursor:pointer;transition:all .18s;text-align:center}
+/* 버튼별 테마 색상 정의 */
+.btn-total{background:linear-gradient(135deg, #1a3a5c, #2563a8); color:#fff;} .btn-total:hover{background:#11273f}
+.btn-g{background:#34495e; color:#fff;} .btn-g:hover{background:#2c3e50}
+.btn-i{background:#2980b9; color:#fff;} .btn-i:hover{background:#2471a3}
+.btn-p{background:#e67e22; color:#fff;} .btn-p:hover{background:#d35400}
+.btn-o{background:#fff; border:2px solid var(--border); color:var(--muted)} .btn-o:hover{background:#f4f6f8; color:var(--text)}
+
+.btn-s{background:var(--success);color:#fff}.btn-s:hover{background:#145018}
+.btn-a{background:var(--accent);color:#fff}.btn-a:hover{background:var(--accent-dark)}
+
+/* ── SUMMARY ── */
+.sum-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-bottom: 16px; }
+@media (max-width: 480px) { .sum-grid { grid-template-columns: repeat(2, 1fr); } }
+.sum-card{
+  background:linear-gradient(135deg,#f0f6ff,#e8f0fa);border:1.5px solid #c5d8f0;border-radius:9px;padding:10px;text-align:center;
+}
+.sum-card .sl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.sum-card .sv{font-size:16px;font-weight:900;color:var(--primary);word-break:break-all}
+.sum-card .su{font-size:11px;color:var(--muted)}
+
+/* ── TABLE ── */
+.tbl-wrap{-webkit-overflow-scrolling:touch;overflow:auto;margin:0 -4px;max-height:65vh;border:1px solid var(--border);border-radius:6px}
+table.rt{width:100%;border-collapse:collapse;font-size:12px;min-width:1300px}
+table.rt th{
+  background:var(--primary);color:#fff;padding:8px 4px;text-align:center;
+  font-size:11px;font-weight:700;border:1px solid #2a4e7a;white-space:nowrap;
+}
+table.rt th.g-bg{background:#1e3d59} table.rt th.i-bg{background:#2e5c8a} table.rt th.p-bg{background:#d96a1a}
+table.rt td{ padding:8px 5px;border:1px solid #dde5f0;white-space:nowrap;text-align:center;font-size:12px; }
+table.rt td.r{text-align:right;padding-right:6px}
+table.rt tr.dist-row:nth-child(even) td{background:#fff8f2}
+table.rt tr.dist-row:nth-child(odd) td{background:#fffdf9}
+table.rt tr.acc-row td{background:#f5f8fc;color:var(--muted)}
+.td-pension{color:var(--accent-dark);font-weight:800}
+
+/* ── STICKY 첫행/첫열 ── */
+table.rt thead th{position:sticky;z-index:3}
+table.rt thead tr:first-child th{top:0}
+table.rt thead tr:last-child th{top:32px}
+table.rt tbody td:first-child{
+  position:sticky;left:0;z-index:1;box-shadow:2px 0 4px rgba(0,0,0,.06);
+}
+table.rt thead tr:first-child th:first-child{
+  position:sticky;left:0;z-index:4;box-shadow:2px 0 4px rgba(0,0,0,.06);
+  background:var(--primary);color:#fff;
+}
+
+/* ── PDF 인쇄 로딩 오버레이 ── */
+.pdf-loading{
+  position:fixed;inset:0;background:rgba(15,25,40,.55);z-index:9999;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;
+}
+.pdf-loading .box{background:var(--primary);padding:20px 28px;border-radius:10px;box-shadow:var(--shadow);text-align:center}
+.pdf-loading .box small{display:block;font-size:12px;font-weight:400;opacity:.8;margin-top:6px}
+
+/* ── CHARTS ── */
+.chart-row{display:flex;gap:16px;flex-wrap:wrap}
+.chart-box{flex:1 1 45%;min-width:300px;margin-bottom:10px}
+@media (max-width: 768px) { .chart-box { flex:1 1 100%; } }
+
+@media print{
+  .no-print{display:none!important} body{background:#fff;font-size:11px}
+  .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid;padding:10px 12px;margin-bottom:10px}
+  .app-hdr{background:var(--primary)!important;padding:10px 16px}
+  .app-hdr h1{font-size:16px} .app-hdr .sub{font-size:10px}
+  table.rt th{background:var(--primary)!important;font-size:10px;padding:4px 4px}
+  table.rt td{font-size:10px;padding:3px 5px} .tbl-wrap{overflow:visible} table.rt{min-width:unset;width:100%}
+  .td-pension{color:var(--accent-dark)!important} .sum-card .sv{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<div class="app-hdr no-print">
+  <div>
+    <h1>🏦 은퇴자산 통합 시뮬레이터</h1>
+    <div class="sub">하단 버튼 이용 통합/개별 단위 분석</div>
+  </div>
+</div>
+
+<div class="container">
+
+<div class="card no-print">
+  <div class="card-title">⚙️ 은퇴 자산 및 수령 조건 설정</div>
+
+  <div class="section-title">👤 공통 기본 설정</div>
+  <div class="input-row" style="margin-bottom:15px;">
+    <div class="ig">
+      <label>현재 나이</label>
+      <input type="number" id="base_age" value="55" min="20" max="100">
+    </div>
+    <div class="ig">
+      <label>물가상승률(%)</label>
+      <input type="number" id="base_inf" value="2.6" step="0.1">
+    </div>
+  </div>
+
+  <div class="section-title">🎲 운용이율 몬테카를로 (변동성 공통적용)</div>
+  <div class="seg-card" style="margin-bottom:15px;align-items:center;">
+    <div class="sg-ig" style="flex:0 0 auto;flex-direction:row;align-items:center;gap:6px;">
+      <input type="checkbox" id="mc_toggle" onchange="toggleMcInputs()" style="width:18px;height:18px;">
+      <label style="font-size:13px;font-weight:800;color:var(--primary);white-space:nowrap;">몬테카를로 적용</label>
+    </div>
+    <div class="sg-ig" id="mc_sigma_wrap" style="display:none">
+      <label>변동성(표준편차,%)</label>
+      <input type="number" id="mc_sigma" value="8" step="0.5" min="0">
+    </div>
+    <div class="sg-ig" id="mc_trials_wrap" style="display:none">
+      <label>시행횟수</label>
+      <input type="number" id="mc_trials" value="300" step="50" min="50" max="2000">
+    </div>
+  </div>
+  <div id="mc_hint" style="display:none;margin:-8px 0 15px;font-size:11px;color:var(--muted)">
+    ℹ️ 매년 동일한 무작위 변동률(공통 충격)이 일반계좌·퇴직IRP·연금저축의 운용이율에 동시에 적용됩니다. (기준 운용이율 ± 변동성)
+  </div>
+
+  <div id="sec_g">
+    <div class="section-title">📈 일반 계좌 설정</div>
+    <div class="input-row" style="margin-bottom:15px;">
+      <div class="ig ig-wide">
+        <label>현재평가액(만원)</label>
+        <input type="text" id="gv" value="50,000" oninput="fmtI(this)" class="required">
+      </div>
+      <div class="ig">
+        <label>운용이율(%)</label>
+        <input type="number" id="gr" value="5.0" step="0.1">
+      </div>
+      <div class="ig">
+        <label>연금개시연령</label>
+        <input type="number" id="gs" value="55" min="40" max="100">
+      </div>
+      <div class="ig">
+        <label>수령기간(년)</label>
+        <input type="number" id="gp" value="40" min="1" max="60">
+      </div>
+      <div class="ig ig-wide">
+        <label>월배당금(만원/월)</label>
+        <input type="text" id="gDiv" value="0" inputmode="numeric" pattern="[0-9,]*" oninput="fmtI(this)">
+      </div>
+    </div>
+  </div>
+
+  <div id="sec_i">
+    <div class="section-title">🛡️ 퇴직 IRP 설정</div>
+    <div class="input-row" style="margin-bottom:15px;">
+      <div class="ig-pair-row">
+        <div class="ig">
+          <label>퇴직원금(만원)</label>
+          <input type="text" id="iprin" value="86,000" oninput="fmtI(this)" class="required">
+        </div>
+        <div class="ig">
+          <label>운용수익(만원)</label>
+          <input type="text" id="iprof" value="20,000" oninput="fmtI(this)" class="required">
+        </div>
+      </div>
+      <div class="ig">
+        <label>퇴직소득세율(%)</label>
+        <input type="number" id="itax" value="12.2" step="0.1">
+      </div>
+      <div class="ig">
+        <label>운용이율(%)</label>
+        <input type="number" id="ir" value="5.0" step="0.1">
+      </div>
+      <div class="ig">
+        <label>연금개시연령</label>
+        <input type="number" id="is_" value="55" min="40" max="100">
+      </div>
+      <div class="ig">
+        <label>수령기간(년)</label>
+        <input type="number" id="ip" value="40" min="1" max="60">
+      </div>
+      <div class="ig ig-wide">
+        <label>월배당금(만원/월)</label>
+        <input type="text" id="iDiv" value="0" inputmode="numeric" pattern="[0-9,]*" oninput="fmtI(this)">
+      </div>
+    </div>
+  </div>
+
+  <div id="sec_p">
+    <div class="section-title">💰 연금저축 설정</div>
+    <div class="input-row" style="margin-bottom:15px;">
+      <div class="ig-pair-row">
+        <div class="ig">
+          <label>세액공제금액(만원)</label>
+          <input type="text" id="ptax" value="10,000" oninput="fmtI(this)" class="required">
+        </div>
+        <div class="ig">
+          <label>안세공제금액(만원)</label>
+          <input type="text" id="pntax" value="3,000" oninput="fmtI(this)" class="required">
+        </div>
+      </div>
+      <div class="ig">
+        <label>운용이율(%)</label>
+        <input type="number" id="pr" value="5.0" step="0.1">
+      </div>
+      <div class="ig">
+        <label>연금개시연령</label>
+        <input type="number" id="ps" value="60" min="40" max="100">
+      </div>
+      <div class="ig">
+        <label>수령기간(년)</label>
+        <input type="number" id="pp" value="20" min="1" max="60">
+      </div>
+      <div class="ig ig-wide">
+        <label>월배당금(만원/월)</label>
+        <input type="text" id="pDiv" value="0" inputmode="numeric" pattern="[0-9,]*" oninput="fmtI(this)">
+      </div>
+    </div>
+  </div>
+
+  <div class="ig" style="margin:-8px 0 15px;font-size:11px;color:var(--muted)">
+    💡 월배당금은 <b>매월 발생</b>하며, 월 인출액 계산 시 배당금을 <b>우선 사용</b>하고 부족분만 원금에서 추가로 인출합니다. 원금(잔액)이 줄어들면 배당금도 같은 비율로 자동 감소합니다.
+  </div>
+
+  <div class="seg-section">
+    <div class="seg-title">📌 나이별 희망 연금액 지정 (<span id="freq-desc" style="color:var(--accent-dark); font-weight:bold;">월 기준</span> · 비워두면 자동 균등 분할 계산됨)</div>
+    <div class="seg-list" id="seg-list"></div>
+  </div>
+
+  <div class="btn-grid btn-grid-2col">
+    <button class="btn btn-total" style="grid-column:1/-1" onclick="simulate('all')">⚖️ 전체 통합조회 시뮬레이션</button>
+    <button class="btn btn-g" onclick="simulate('g')">📈 일반계좌만 조회</button>
+    <button class="btn btn-i" onclick="simulate('i')">🛡️ 퇴직IRP만 조회</button>
+    <button class="btn btn-p" onclick="simulate('p')">💰 연금저축만 조회</button>
+    <button class="btn btn-o" onclick="resetAll()">↺ 값 초기화</button>
+  </div>
+</div>
+
+<div id="result-area" style="display:none">
+  <div class="card">
+    <div class="card-title" id="summary-title">📊 시뮬레이션 결과 요약</div>
+    <div class="sum-grid" id="sum-grid"></div>
+    <div class="btn-row no-print">
+      <button class="btn btn-s" onclick="exportXls()">📥 엑셀 데이터 저장</button>
+      <button class="btn btn-a" onclick="printReportPdf()">🖨️ 보고서 인쇄(PDF)</button>
+    </div>
+  </div>
+
+  <div class="card" id="mc-summary-card" style="display:none">
+    <div class="card-title">🎲 몬테카를로 시뮬레이션 결과 (변동성 공통적용, <span id="mc-trial-count"></span>회 시행)</div>
+    <div class="sum-grid" id="mc-sum-grid"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px">※ 아래 그래프/표는 <b>중앙값(P50)</b> 시나리오 기준이며, 실제 결과는 변동성에 따라 달라질 수 있습니다.</div>
+  </div>
+
+  <div class="card no-print">
+    <div class="card-title">📈 자산 및 인출 추이 그래프</div>
+    <div class="chart-row">
+      <div class="chart-box"><canvas id="chartAsset" height="260"></canvas></div>
+      <div class="chart-box"><canvas id="chartPension" height="260"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" id="res-title">🗓️ 연도별 예상 연금 수령액 및 잔액 상세 내역 (단위: 만원)</div>
+    <div class="tbl-wrap">
+      <table class="rt" id="res-tbl">
+        <thead id="res-thead"></thead>
+        <tbody id="res-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+let segs = [];
+let simData = [];
+let ch1 = null, ch2 = null;
+let currentMode = 'all'; // 현재 실행된 모드 추적용 변수
+
+const fmt = n => {
+  if (n === undefined || n === null || isNaN(n)) return '0';
+  return Math.abs(Math.round(n)) < 1000 ? Math.round(n).toString() : Math.round(n).toLocaleString('ko-KR');
+};
+const pN = s => parseFloat(String(s).replace(/,/g,'')) || 0;
+
+function fmtI(el) {
+  const raw = el.value.replace(/,/g,'');
+  if (!isNaN(raw) && raw !== '') el.value = Number(raw).toLocaleString('ko-KR');
+}
+
+const pensTaxRate = age => age < 70 ? 3.3 : age < 80 ? 4.4 : 5.5;
+
+window.addEventListener('load', () => {
+  initInitialSegs();
+});
+
+function initInitialSegs() {
+  segs = [
+    { id: 1, age: '55', amt: '380' },
+    { id: 2, age: '56', amt: '450' },
+    { id: 3, age: '65', amt: '500' },
+    { id: 4, age: '', amt: '' },
+    { id: 5, age: '', amt: '' }
+  ];
+  renderSegs();
+  syncFreqLabels();
+}
+
+function updateSeg(id, k, v) {
+  const s = segs.find(x => x.id === id);
+  if (s) s[k] = v;
+}
+
+function renderSegs() {
+  const c = document.getElementById('seg-list');
+  c.innerHTML = '';
+  segs.forEach((seg, idx) => {
+    const d = document.createElement('div');
+    d.className = 'seg-card';
+    d.innerHTML = `
+      <div class="sg-ig">
+        <label>구간${idx+1} 나이</label>
+        <input type="number" value="${seg.age}" min="40" max="105" onchange="updateSeg(${seg.id},'age',this.value)">
+      </div>
+      <div class="sg-ig">
+        <label class="seg-amt-label">지정 연금액(만원)</label>
+        <input type="text" value="${seg.amt ? Number(seg.amt).toLocaleString('ko-KR') : ''}" oninput="fmtI(this);updateSeg(${seg.id},'amt',this.value)">
+      </div>
+    `;
+    c.appendChild(d);
+  });
+}
+
+function syncFreqLabels() {
+  document.querySelectorAll('.seg-amt-label').forEach(el => {
+    el.textContent = '지정 연금액(만원/월)';
+  });
+  document.getElementById('freq-desc').textContent = '월 기준';
+}
+
+function getSegMap(multiplier) {
+  const map = {};
+  segs.forEach(s => {
+    const a = parseInt(s.age), m = pN(s.amt);
+    if (a >= 40 && a <= 105 && m > 0) map[a] = m * multiplier;
+  });
+  return map;
+}
+
+function pmtCalc(bal, rate, periods) {
+  if (periods <= 0) return 0;
+  if (rate === 0) return bal / periods;
+  return bal * rate / (1 - Math.pow(1 + rate, -periods));
+}
+
+function toggleMcInputs() {
+  const on = document.getElementById('mc_toggle').checked;
+  document.getElementById('mc_sigma_wrap').style.display = on ? '' : 'none';
+  document.getElementById('mc_trials_wrap').style.display = on ? '' : 'none';
+  document.getElementById('mc_hint').style.display = on ? '' : 'none';
+}
+
+// Box-Muller 표준정규분포 난수 생성
+function gaussianRandom() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── 버튼 클릭 시 진입점: 몬테카를로 On/Off 분기 ──
+function simulate(mode) {
+  currentMode = mode || 'all';
+  const mcOn = document.getElementById('mc_toggle').checked;
+  document.getElementById('mc-summary-card').style.display = mcOn ? '' : 'none';
+
+  if (mcOn) {
+    runMonteCarlo(currentMode);
+  } else {
+    const { rows, multiplier } = computeRows(currentMode, null);
+    simData = rows;
+    renderResult(rows, multiplier);
+  }
+}
+
+// ── 핵심 시뮬레이션 계산 로직 (mode + 연도별 공통 변동률(shocks, z-score 배열) 주입받음) ──
+function computeRows(mode, shocks) {
+  const baseAge = +document.getElementById('base_age').value;
+  const baseYear = new Date().getFullYear();
+  const sigma = shocks ? (+document.getElementById('mc_sigma').value / 100) : 0;
+
+  // 어떤 버튼을 눌렀느냐에 따라 계산 유무 분기 처리
+  const useG = (mode === 'all' || mode === 'g');
+  const useI = (mode === 'all' || mode === 'i');
+  const useP = (mode === 'all' || mode === 'p');
+
+  const gBaseRate = +document.getElementById('gr').value/100;
+  const iBaseRate = +document.getElementById('ir').value/100;
+  const pBaseRate = +document.getElementById('pr').value/100;
+
+  const g = {
+    val: useG ? pN(document.getElementById('gv').value) : 0, 
+    rate: gBaseRate,
+    start: +document.getElementById('gs').value, 
+    period: +document.getElementById('gp').value
+  };
+
+  const i = {
+    prin: useI ? pN(document.getElementById('iprin').value) : 0, 
+    profit: useI ? pN(document.getElementById('iprof').value) : 0, 
+    taxRate: +document.getElementById('itax').value/100,
+    rate: iBaseRate, 
+    start: +document.getElementById('is_').value, 
+    period: +document.getElementById('ip').value, 
+    get val(){ return this.prin + this.profit; }
+  };
+
+  const p = {
+    taxAmt: useP ? pN(document.getElementById('ptax').value) : 0, 
+    noTaxAmt: useP ? pN(document.getElementById('pntax').value) : 0,
+    rate: pBaseRate, 
+    start: +document.getElementById('ps').value, 
+    period: +document.getElementById('pp').value, 
+    get val(){ return this.taxAmt + this.noTaxAmt; }
+  };
+
+  const multiplier = 12; // 수령방법 선택 제거: 항상 월 기준으로 통일
+  const segMap = getSegMap(multiplier);
+  const hasSegs = Object.keys(segMap).length > 0;
+
+  // 월배당금 → 초기잔액 대비 연간 배당수익률로 환산 (이후 매년 "현재 잔액 × 배당률"로 재계산되어
+  // 잔액(원금)이 줄어들면 배당금도 같은 비율로 자동 감소함)
+  const gDivMonthly = useG ? pN(document.getElementById('gDiv').value) : 0;
+  const iDivMonthly = useI ? pN(document.getElementById('iDiv').value) : 0;
+  const pDivMonthly = useP ? pN(document.getElementById('pDiv').value) : 0;
+  const gDivRate = (gDivMonthly > 0 && g.val > 0) ? (gDivMonthly * 12) / g.val : 0;
+  const iDivRate = (iDivMonthly > 0 && i.val > 0) ? (iDivMonthly * 12) / i.val : 0;
+  const pDivRate = (pDivMonthly > 0 && p.val > 0) ? (pDivMonthly * 12) / p.val : 0;
+
+  let gBal = g.val;
+  let gPrinRem = g.val; 
+  let iBal = i.val;            
+  let irpPrinRem = i.prin;     
+  let pBal = p.val;            
+  let pensNoTaxRem = p.noTaxAmt;
+
+  const rows = [];
+  const maxAge = 105;
+
+  for (let age = baseAge; age <= maxAge; age++) {
+    const year = baseYear + (age - baseAge);
+    const idx = age - baseAge;
+    // 몬테카를로: 매년 동일한(공통) 무작위 충격(z)을 세 계좌 운용이율에 동일하게 가산 적용
+    const z = shocks ? (shocks[idx] || 0) : 0;
+    const gRateEff = g.rate + z * sigma;
+    const iRateEff = i.rate + z * sigma;
+    const pRateEff = p.rate + z * sigma;
+
+    if (age > baseAge) {
+      if (useG && gBal > 0) gBal *= (1 + gRateEff);
+      if (useI && iBal > 0) iBal *= (1 + iRateEff);
+      if (useP && pBal > 0) pBal *= (1 + pRateEff);
+    }
+
+    const isG_Active = (useG && age >= g.start && age < g.start + g.period && gBal > 0);
+    const isI_Active = (useI && age >= i.start && age < i.start + i.period && iBal > 0);
+    const isP_Active = (useP && age >= p.start && age < p.start + p.period && pBal > 0);
+
+    // 월배당금: 연금개시연령과 무관하게 잔액이 있는 한 매년 지급되며, 현재 잔액 기준으로 재계산됨
+    const gDivActive = (useG && gDivRate > 0 && gBal > 0);
+    const iDivActive = (useI && iDivRate > 0 && iBal > 0);
+    const pDivActive = (useP && pDivRate > 0 && pBal > 0);
+    const gDivAnnual = gDivActive ? gBal * gDivRate : 0;
+    const iDivAnnual = iDivActive ? iBal * iDivRate : 0;
+    const pDivAnnual = pDivActive ? pBal * pDivRate : 0;
+
+    // 연금 목표 인출액(월 배당금과 별개로 계좌 잔액을 잔여기간에 걸쳐 균등 상환하는 이론값)
+    const gPensionTarget = isG_Active ? pmtCalc(gBal, gRateEff, g.start + g.period - age) : 0;
+    const iPensionTarget = isI_Active ? pmtCalc(iBal, iRateEff, i.start + i.period - age) : 0;
+    const pPensionTarget = isP_Active ? pmtCalc(pBal, pRateEff, p.start + p.period - age) : 0;
+
+    // 월 인출액은 매월 발생하는 배당금을 우선 사용하고, 목표액에 못 미치는 부족분만 원금에서 추가 인출
+    // (연금개시 전/후 관계없이 배당금은 그대로 지급됨)
+    let gPreAnnual = isG_Active ? Math.max(gPensionTarget, gDivAnnual) : gDivAnnual;
+    let iPreAnnual = isI_Active ? Math.max(iPensionTarget, iDivAnnual) : iDivAnnual;
+    let pPreAnnual = isP_Active ? Math.max(pPensionTarget, pDivAnnual) : pDivAnnual;
+
+    if (hasSegs) {
+      const sortedKeys = Object.keys(segMap).map(Number).sort((a,b)=>a-b);
+      let applicable = null;
+      for (const k of sortedKeys) { if (age >= k) applicable = segMap[k]; }
+      
+      if (applicable !== null) {
+        let totalAutoPre = gPreAnnual + iPreAnnual + pPreAnnual;
+        if (totalAutoPre > 0) {
+          const ratio = applicable / totalAutoPre;
+          gPreAnnual *= ratio; iPreAnnual *= ratio; pPreAnnual *= ratio;
+        } else if (isG_Active || isI_Active || isP_Active) {
+          const activeCnt = (isG_Active?1:0) + (isI_Active?1:0) + (isP_Active?1:0);
+          const share = applicable / activeCnt;
+          gPreAnnual = isG_Active ? share : 0;
+          iPreAnnual = isI_Active ? share : 0;
+          pPreAnnual = isP_Active ? share : 0;
+        }
+      }
+    }
+
+    if (gPreAnnual > gBal) gPreAnnual = gBal;
+    if (iPreAnnual > iBal) iPreAnnual = iBal;
+    if (pPreAnnual > pBal) pPreAnnual = pBal;
+
+    // 1) 일반계좌 15.4% 수익 추적 과세
+    let gTax = 0;
+    if (gPreAnnual > 0) {
+      const gProfitRem = Math.max(0, gBal - gPrinRem);
+      let fromProfit = 0;
+      if (gBal > 0) fromProfit = gPreAnnual * (gProfitRem / gBal);
+      gTax = fromProfit * 0.154;
+      gPrinRem = Math.max(0, gPrinRem - (gPreAnnual - fromProfit));
+    }
+    let gPostAnnual = gPreAnnual - gTax;
+
+    // 2) 퇴직 IRP 과세
+    let iTax = 0;
+    if (iPreAnnual > 0) {
+      if (irpPrinRem > 0) {
+        const fromPrin = Math.min(iPreAnnual, irpPrinRem);
+        const fromProfit = iPreAnnual - fromPrin;
+        const profRate = iPreAnnual > 1500 ? 0.154 : pensTaxRate(age) / 100;
+        iTax = (fromPrin * i.taxRate) + (fromProfit * profRate);
+        irpPrinRem = Math.max(0, irpPrinRem - fromPrin);
+      } else {
+        iTax = iPreAnnual * (iPreAnnual > 1500 ? 0.154 : pensTaxRate(age) / 100);
+      }
+    }
+    let iPostAnnual = iPreAnnual - iTax;
+
+    // 3) 연금저축 과세
+    let pTax = 0;
+    if (pPreAnnual > 0) {
+      if (pensNoTaxRem > 0) {
+        const fromNoTax = Math.min(pPreAnnual, pensNoTaxRem);
+        const fromTaxed = pPreAnnual - fromNoTax;
+        pTax = fromTaxed * (pPreAnnual > 1500 ? 0.154 : pensTaxRate(age) / 100);
+        pensNoTaxRem = Math.max(0, pensNoTaxRem - fromNoTax);
+      } else {
+        pTax = pPreAnnual * (pPreAnnual > 1500 ? 0.154 : pensTaxRate(age) / 100);
+      }
+    }
+    let pPostAnnual = pPreAnnual - pTax;
+
+    gBal = Math.max(0, gBal - gPreAnnual);
+    iBal = Math.max(0, iBal - iPreAnnual);
+    pBal = Math.max(0, pBal - pPreAnnual);
+
+    const totalPre = gPreAnnual + iPreAnnual + pPreAnnual;
+    const totalPost = gPostAnnual + iPostAnnual + pPostAnnual;
+    const totalTax = gTax + iTax + pTax;
+    const totalBal = gBal + iBal + pBal;
+
+    rows.push({
+      age, year, multiplier,
+      gPre: gPreAnnual, gPost: gPostAnnual, gTax, gBal,
+      iPre: iPreAnnual, iPost: iPostAnnual, iTax, iBal,
+      pPre: pPreAnnual, pPost: pPostAnnual, pTax, pBal,
+      totalPre, totalPost, totalTax, totalBal,
+      isAcc: !(isG_Active || isI_Active || isP_Active || gDivActive || iDivActive || pDivActive)
+    });
+
+    const checkActiveStart = Math.max(useG ? g.start : 0, useI ? i.start : 0, useP ? p.start : 0);
+    if (totalBal <= 0 && totalPre <= 0 && age > checkActiveStart) break;
+  }
+
+  return { rows, multiplier };
+}
+
+// ── 몬테카를로 시뮬레이션: N회 시행 후 중앙값 시나리오를 화면에 표시, 통계는 별도 요약 ──
+function runMonteCarlo(mode) {
+  const baseAge = +document.getElementById('base_age').value;
+  const maxAge = 105;
+  const trials = Math.max(50, Math.min(2000, +document.getElementById('mc_trials').value || 300));
+  const yearCount = maxAge - baseAge + 1;
+
+  const trialResults = [];
+  for (let t = 0; t < trials; t++) {
+    const shocks = new Array(yearCount).fill(0).map(() => gaussianRandom());
+    const { rows, multiplier } = computeRows(mode, shocks);
+    const finalBal = rows.length ? rows[rows.length - 1].totalBal : 0;
+    const sumTotalPost = rows.reduce((s, r) => s + r.totalPost, 0);
+    const depRow = rows.find(r => r.totalBal <= 0 && r.totalPre > 0);
+    trialResults.push({ rows, multiplier, finalBal, sumTotalPost, depAge: depRow ? depRow.age : null });
+  }
+
+  // 중앙값(세후 누적 수령액 기준) 시나리오를 대표값으로 채택하여 표/그래프에 표시
+  const sorted = [...trialResults].sort((a, b) => a.sumTotalPost - b.sumTotalPost);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  simData = median.rows;
+  renderResult(median.rows, median.multiplier);
+
+  // 통계 집계
+  const posts = sorted.map(r => r.sumTotalPost);
+  const pct = p => posts[Math.min(posts.length - 1, Math.floor(p * posts.length))];
+  const depletedCount = trialResults.filter(r => r.depAge !== null).length;
+  const successRate = 100 * (1 - depletedCount / trials);
+  const depAges = trialResults.filter(r => r.depAge !== null).map(r => r.depAge).sort((a,b)=>a-b);
+  const depAgeMedianStr = depAges.length ? (depAges[Math.floor(depAges.length/2)] + '세') : '해당없음';
+
+  document.getElementById('mc-trial-count').textContent = trials;
+  document.getElementById('mc-sum-grid').innerHTML = `
+    <div class="sum-card"><div class="sl">자산 미고갈 성공률(105세까지)</div><div class="sv" style="color:${successRate>=80?'var(--success)':'var(--danger)'}">${fmt(successRate)}%</div><div class="su">${trials}회 시행 중</div></div>
+    <div class="sum-card"><div class="sl">누적 세후 수령액 P10</div><div class="sv">${fmt(pct(0.10))}</div><div class="su">만원 (하위 10%)</div></div>
+    <div class="sum-card"><div class="sl">누적 세후 수령액 P50(중앙값)</div><div class="sv" style="color:var(--accent-dark)">${fmt(pct(0.50))}</div><div class="su">만원</div></div>
+    <div class="sum-card"><div class="sl">누적 세후 수령액 P90</div><div class="sv">${fmt(pct(0.90))}</div><div class="su">만원 (상위 10%)</div></div>
+    <div class="sum-card"><div class="sl">자산 고갈 시 중앙값 나이</div><div class="sv" style="color:${depAges.length?'var(--danger)':'var(--success)'}">${depAgeMedianStr}</div><div class="su">${depletedCount}/${trials}회 고갈 발생</div></div>
+  `;
+}
+
+function renderResult(rows, multiplier) {
+  document.getElementById('result-area').style.display = '';
+
+  // 현재 모드 텍스트 분기
+  let modeText = "전체 통합조회";
+  if (currentMode === 'g') modeText = "일반계좌 단독조회";
+  if (currentMode === 'i') modeText = "퇴직IRP 단독조회";
+  if (currentMode === 'p') modeText = "연금저축 단독조회";
+
+  document.getElementById('summary-title').innerHTML = `📊 시뮬레이션 결과 요약 (<span style="color:var(--primary-l)">${modeText}</span>)`;
+
+  const sumTotalPre = rows.reduce((s, r) => s + r.totalPre, 0);
+  const sumTotalPost = rows.reduce((s, r) => s + r.totalPost, 0);
+  const sumTotalTax = rows.reduce((s, r) => s + r.totalTax, 0);
+  const finalBal = rows[rows.length - 1] ? rows[rows.length - 1].totalBal : 0;
+  const depAgeRow = rows.find(r => r.totalBal <= 0 && r.totalPre > 0);
+  const depAge = depAgeRow ? depAgeRow.age : null;
+
+  document.getElementById('sum-grid').innerHTML = `
+    <div class="sum-card"><div class="sl">총 수령액 (누적 세전)</div><div class="sv">${fmt(sumTotalPre)}</div><div class="su">만원</div></div>
+    <div class="sum-card"><div class="sl">총 수령액 (누적 세후)</div><div class="sv" style="color:var(--accent-dark)">${fmt(sumTotalPost)}</div><div class="su">만원</div></div>
+    <div class="sum-card"><div class="sl">총 납부 예상 세금</div><div class="sv" style="color:var(--danger)">${fmt(sumTotalTax)}</div><div class="su">만원</div></div>
+    <div class="sum-card"><div class="sl">최종 자산 선택 잔액</div><div class="sv">${fmt(finalBal)}</div><div class="su">만원</div></div>
+    <div class="sum-card"><div class="sl">선택 자산 고갈 시점</div>
+      <div class="sv" style="color:${depAge ? 'var(--danger)' : 'var(--success)'}">${depAge ? depAge + '세' : '미고갈'}</div>
+      <div class="su">${depAge ? '⚠️ 자산 고갈 대비 필요' : '✅ 105세 안정 유지'}</div></div>
+  `;
+
+  const subLabel = multiplier === 12 ? '월액' : '연액';
+  document.getElementById('res-thead').innerHTML = `
+    <tr>
+      <th rowspan="2">연령</th><th rowspan="2">년도</th>
+      <th colspan="3" class="g-bg">일반 계좌 (만원/${subLabel})</th>
+      <th colspan="3" class="i-bg">퇴직 IRP (만원/${subLabel})</th>
+      <th colspan="3" class="p-bg">연금저축 (만원/${subLabel})</th>
+      <th colspan="4">선택 조건 합산 (연간 기준)</th>
+    </tr>
+    <tr>
+      <th class="g-bg">세전</th><th class="g-bg">세후</th><th class="g-bg">잔액</th>
+      <th class="i-bg">세전</th><th class="i-bg">세후</th><th class="i-bg">잔액</th>
+      <th class="p-bg">세전</th><th class="p-bg">세후</th><th class="p-bg">잔액</th>
+      <th>총 세전</th><th class="td-pension">총 세후</th><th>총 세금</th><th>총 잔액</th>
+    </tr>
+  `;
+
+  const tbody = document.getElementById('res-tbody');
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.className = r.isAcc ? 'acc-row' : 'dist-row';
+    tr.innerHTML = `
+      <td>${r.age}세</td><td>${r.year}</td>
+      <td class="r">${r.gPre > 0 ? fmt(r.gPre / multiplier) : '-'}</td><td class="r">${r.gPost > 0 ? fmt(r.gPost / multiplier) : '-'}</td><td class="r">${fmt(r.gBal)}</td>
+      <td class="r">${r.iPre > 0 ? fmt(r.iPre / multiplier) : '-'}</td><td class="r">${r.iPost > 0 ? fmt(r.iPost / multiplier) : '-'}</td><td class="r">${fmt(r.iBal)}</td>
+      <td class="r">${r.pPre > 0 ? fmt(r.pPre / multiplier) : '-'}</td><td class="r">${r.pPost > 0 ? fmt(r.pPost / multiplier) : '-'}</td><td class="r">${fmt(r.pBal)}</td>
+      <td class="r" style="font-weight:700">${r.totalPre > 0 ? fmt(r.totalPre) : '-'}</td>
+      <td class="r td-pension">${r.totalPost > 0 ? fmt(r.totalPost) : '-'}</td>
+      <td class="r" style="color:var(--danger)">${r.totalTax > 0 ? fmt(r.totalTax) : '-'}</td>
+      <td class="r" style="font-weight:700; background:#eef4fc;">${fmt(r.totalBal)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  renderCharts(rows);
+  document.getElementById('result-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderCharts(rows) {
+  if (ch1) ch1.destroy(); if (ch2) ch2.destroy();
+  const labels = rows.map(r => r.age + '세');
+
+  ch1 = new Chart(document.getElementById('chartAsset').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: '일반계좌', data: rows.map(r=>r.gBal), borderColor: '#1a3a5c', backgroundColor: 'rgba(26,58,92,.05)', fill: true, pointRadius:1 },
+        { label: '퇴직IRP', data: rows.map(r=>r.iBal), borderColor: '#2563a8', backgroundColor: 'rgba(37,99,168,.05)', fill: true, pointRadius:1 },
+        { label: '연금저축', data: rows.map(r=>r.pBal), borderColor: '#d96a1a', backgroundColor: 'rgba(217,106,26,.05)', fill: true, pointRadius:1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { title: { display: true, text: '💡 자산 계좌별 잔액 추이 (단위: 만원)', font: { size:12, weight:'bold'} } },
+      scales: { y: { stacked: true, ticks: { callback: v => fmt(v) } } }
+    }
+  });
+
+  ch2 = new Chart(document.getElementById('chartPension').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: '연간 총 세전연금액', data: rows.map(r=>Math.round(r.totalPre)), backgroundColor: 'rgba(37,99,168,.3)' },
+        { label: '연간 총 세후연금액', data: rows.map(r=>Math.round(r.totalPost)), backgroundColor: 'rgba(217,106,26,.7)' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { title: { display: true, text: '💡 연도별 인출액 추이 (단위: 만원)', font: { size:12, weight:'bold'} } },
+      scales: { y: { ticks: { callback: v => fmt(v) } } }
+    }
+  });
+}
+
+function exportXls() {
+  if (!simData.length) return;
+  const multiplier = simData[0].multiplier;
+  const sub = multiplier === 12 ? '월액' : '연액';
+  const data = [['연령', '년도', `일반세전(${sub})`, `일반세후(${sub})`, '일반잔액', `IRP세전(${sub})`, `IRP세후(${sub})`, 'IRP잔액', `연금세전(${sub})`, `연금세후(${sub})`, '연금잔액', '통합세전', '통합세후', '총세금', '총잔액']];
+  
+  simData.forEach(r => {
+    data.push([
+      r.age+'세', r.year,
+      Math.round(r.gPre/multiplier), Math.round(r.gPost/multiplier), r.gBal,
+      Math.round(r.iPre/multiplier), Math.round(r.iPost/multiplier), r.iBal,
+      Math.round(r.pPre/multiplier), Math.round(r.pPost/multiplier), r.pBal,
+      Math.round(r.totalPre), Math.round(r.totalPost), Math.round(r.totalTax), r.totalBal
+    ]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '연금시뮬레이션');
+  XLSX.writeFile(wb, '은퇴연금_시뮬레이션_' + currentMode + '.xlsx');
+}
+
+function resetAll() {
+  document.getElementById('gv').value = "50,000";
+  document.getElementById('iprin').value = "86,000";
+  document.getElementById('iprof').value = "20,000";
+  document.getElementById('ptax').value = "10,000";
+  document.getElementById('pntax').value = "3,000";
+  document.getElementById('gDiv').value = "0";
+  document.getElementById('iDiv').value = "0";
+  document.getElementById('pDiv').value = "0";
+  document.getElementById('mc_toggle').checked = false;
+  document.getElementById('mc_sigma').value = "8";
+  document.getElementById('mc_trials').value = "300";
+  toggleMcInputs();
+  initInitialSegs();
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('mc-summary-card').style.display = 'none';
+}
+
+// ── 결과 전체(요약+그래프+상세표)를 하나의 PDF로 인쇄/저장 ──
+async function printReportPdf() {
+  const target = document.getElementById('result-area');
+  if (!target || target.style.display === 'none') {
+    alert('먼저 시뮬레이션을 실행한 후 인쇄해 주세요.');
+    return;
+  }
+  const overlay = document.createElement('div');
+  overlay.className = 'pdf-loading';
+  overlay.innerHTML = '<div class="box">📄 PDF 생성 중...<small>내용이 많을 경우 몇 초 정도 소요될 수 있습니다</small></div>';
+  document.body.appendChild(overlay);
+  await new Promise(r => setTimeout(r, 60));
+
+  // 상세표는 스크롤(sticky) 영역이라 캡처 전 임시로 전체 높이로 펼쳐서 모든 행이 인쇄되도록 함
+  const wraps = target.querySelectorAll('.tbl-wrap');
+  const prevStyles = [];
+  wraps.forEach(w => {
+    prevStyles.push({ el: w, maxHeight: w.style.maxHeight, overflow: w.style.overflow });
+    w.style.maxHeight = 'none';
+    w.style.overflow = 'visible';
+  });
+
+  try {
+    const canvas = await html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      ignoreElements: el => !!(el.classList && (el.classList.contains('btn-row') || el.tagName === 'BUTTON'))
+    });
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = canvas.height * imgW / canvas.width;
+
+    let heightLeft = imgH;
+    let position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+    heightLeft -= pageH;
+    while (heightLeft > 0) {
+      position = heightLeft - imgH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+      heightLeft -= pageH;
+    }
+    pdf.save('은퇴연금_시뮬레이션_보고서_' + currentMode + '.pdf');
+  } catch (e) {
+    console.error(e);
+    alert('PDF 생성 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.');
+  } finally {
+    prevStyles.forEach(s => { s.el.style.maxHeight = s.maxHeight; s.el.style.overflow = s.overflow; });
+    overlay.remove();
+  }
+}
+</script>
+</body>
+</html>

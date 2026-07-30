@@ -224,6 +224,50 @@
         line-height: 1.5;
     }
 
+    .print-only { display: none; }
+    .print-header { text-align: center; margin-bottom: 18px; }
+    .print-header h2 { color: #2c2560; margin: 0 0 6px 0; font-size: 19px; }
+    .print-header p { color: #7f8c8d; font-size: 12px; margin: 0; }
+    .print-section-title {
+        font-size: 15px;
+        color: #4a3fb5;
+        margin: 18px 0 10px 0;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #ece9fb;
+    }
+
+    button.print-btn {
+        width: 100%;
+        padding: 13px;
+        background-color: #16a085;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 10px;
+    }
+    button.print-btn:hover { background-color: #128a70; }
+
+    @media print {
+        body { background: #fff; padding: 0; }
+        .container { box-shadow: none; max-width: 100%; padding: 0; }
+        .tabs, .btn-container, details.settings summary { display: none !important; }
+        .print-only { display: block !important; }
+        .tab-content { display: block !important; }
+        #tab1 .input-group { display: none !important; }
+        #tab2, #tab3 { page-break-before: always; }
+        .card, .row { break-inside: avoid; }
+        details.settings {
+            border: none;
+            background: none;
+            padding: 0;
+            margin-top: 0;
+        }
+    }
+
     @media (max-width: 700px) {
         body { padding: 8px; }
         .container { padding: 16px 14px; border-radius: 10px; }
@@ -278,50 +322,72 @@
     <div class="input-group">
         <div class="form-control">
             <label for="pensionAmount">연간 국민연금(공적연금) 수령액 (만원)</label>
-            <input type="text" id="pensionAmount" value="3,000" oninput="formatInputWithCommas(this)">
+            <input type="text" inputmode="decimal" id="pensionAmount" value="3,000" oninput="formatInputWithCommas(this)">
         </div>
         <div class="form-control">
             <label for="finIncome">연간 금융소득 (이자+배당, 만원)</label>
-            <input type="text" id="finIncome" value="2,500" oninput="formatInputWithCommas(this)">
+            <input type="text" inputmode="decimal" id="finIncome" value="2,500" oninput="formatInputWithCommas(this)">
+        </div>
+        <div class="form-control">
+            <label for="divIncome">그 중 배당소득 금액 (만원)</label>
+            <input type="text" inputmode="decimal" id="divIncome" value="0" oninput="formatInputWithCommas(this)">
+            <div class="hint">금융소득 중 배당소득에 해당하는 금액입니다. 나머지는 이자소득으로 간주하며, 배당소득의 종합과세 초과분에는 배당가산(Gross-up) 및 배당세액공제가 적용됩니다. 모두 이자소득이면 0으로 두세요.</div>
         </div>
         <div class="form-control full-width" style="grid-column: 1 / -1;">
             <label for="pensionWithheld">국민연금 기 원천징수세액 (연간, 원)</label>
-            <input type="text" id="pensionWithheld" value="0" oninput="formatInputWithCommas(this)">
+            <input type="text" inputmode="decimal" id="pensionWithheld" value="0" oninput="formatInputWithCommas(this)">
             <div class="hint">국민연금공단이 매월 지급 시 미리 뗀 세금의 연간 합계액입니다. 연금 지급명세서에서 확인 가능하며, 모르면 0으로 두면 종합소득세 신고 시 전액을 추가 납부하는 것으로 계산됩니다.</div>
         </div>
 
-        <details class="settings">
+        <details class="settings" id="settingsDetails">
             <summary>⚙️ 세부 기준값 설정 (2026년 기준, 필요시 수정)</summary>
             <div class="settings-grid">
                 <div class="form-control">
                     <label for="premiumRate">건강보험료율 (%)</label>
-                    <input type="text" id="premiumRate" value="8.1348">
+                    <input type="text" inputmode="decimal" id="premiumRate" value="8.1348">
+                    <div class="hint">2026년 기준 예상치이며, 장기요양보험료가 이미 포함된 합산 요율입니다 (별도 가산 불필요).</div>
                 </div>
                 <div class="form-control">
                     <label for="pensionReflectRate">건보료 - 공적연금 반영비율 (%)</label>
-                    <input type="text" id="pensionReflectRate" value="50">
+                    <input type="text" inputmode="decimal" id="pensionReflectRate" value="50">
                 </div>
                 <div class="form-control">
                     <label for="finPremiumThreshold">건보료 - 금융소득 반영기준 (만원)</label>
-                    <input type="text" id="finPremiumThreshold" value="1,000" oninput="formatInputWithCommas(this)">
+                    <input type="text" inputmode="decimal" id="finPremiumThreshold" value="1,000" oninput="formatInputWithCommas(this)">
                     <div class="hint">이 금액 초과 시 금융소득 전액이 건보료 부과대상에 포함됩니다.</div>
                 </div>
                 <div class="form-control">
                     <label for="finTaxThreshold">금융소득종합과세 기준금액 (만원)</label>
-                    <input type="text" id="finTaxThreshold" value="2,000" oninput="formatInputWithCommas(this)">
-                    <div class="hint">이 금액까지는 분리과세로 종결, 초과분만 종합과세 대상입니다.</div>
+                    <input type="text" inputmode="decimal" id="finTaxThreshold" value="2,000" oninput="formatInputWithCommas(this)">
+                    <div class="hint">이 금액까지는 분리과세로 종결, 초과분만 종합과세 대상입니다. (이자소득이 먼저 채워지고 남은 한도만큼 배당소득이 채워집니다)</div>
                 </div>
-                <div class="form-control full-width" style="grid-column: 1 / -1;">
+                <div class="form-control">
                     <label for="finWithholdRate">이자·배당 원천징수세율 (%, 지방소득세 포함)</label>
-                    <input type="text" id="finWithholdRate" value="15.4">
+                    <input type="text" inputmode="decimal" id="finWithholdRate" value="15.4">
+                </div>
+                <div class="form-control">
+                    <label for="localSurtaxRate">지방소득세율 (종합소득세 국세의 %)</label>
+                    <input type="text" inputmode="decimal" id="localSurtaxRate" value="10">
+                </div>
+                <div class="form-control">
+                    <label for="grossUpRate">배당가산율 Gross-up (%)</label>
+                    <input type="text" inputmode="decimal" id="grossUpRate" value="11">
+                    <div class="hint">배당소득 중 종합과세 초과분에 대한 이중과세 조정용 가산율입니다.</div>
+                </div>
+                <div class="form-control">
+                    <label for="basicDeduction">기본공제 (본인공제, 만원)</label>
+                    <input type="text" inputmode="decimal" id="basicDeduction" value="150">
                 </div>
             </div>
         </details>
 
         <div class="btn-container" style="margin-top: 16px;">
             <button type="button" class="action-btn" onclick="calculateAll()">계산하기</button>
+            <button type="button" class="print-btn" onclick="printReport()">🖨️ 계산결과 PDF 인쇄</button>
         </div>
     </div>
+
+    <div id="printSummary" class="print-only"></div>
 
     <div id="resultWrap" class="result-wrap">
 
@@ -335,10 +401,11 @@
 
         <div class="card">
             <h3>📋 소득세 (종합소득세) 요약</h3>
-            <div class="row highlight"><span class="lbl">종합소득세액</span><span class="val" id="rComprehensiveTaxBrief"></span></div>
+            <div class="row"><span class="lbl">분리과세 세액 (금융소득 기준금액 이하, 원천징수로 종결)</span><span class="val" id="rSepTaxBrief"></span></div>
+            <div class="row highlight"><span class="lbl">종합소득세 확정세액</span><span class="val" id="rComprehensiveTaxBrief"></span></div>
             <div class="row"><span class="lbl">기납부세액 (원천징수 합계: 금융소득 초과분 + 국민연금)</span><span class="val" id="rWithheldTotalBrief"></span></div>
             <div class="row highlight"><span class="lbl" id="rAdditionalLabelBrief">5월 종합소득세 신고 시 추가 납부액</span><span class="val" id="rAdditionalBrief"></span></div>
-            <div class="row"><span class="lbl">연간 총 소득세 부담액 (분리과세 최종세액 + 종합소득세 확정세액)</span><span class="val" id="rTotalTaxBrief"></span></div>
+            <div class="row total"><span class="lbl">연간 총 소득세 부담액 (분리과세 + 종합소득세 확정세액)</span><span class="val" id="rTotalTaxBrief"></span></div>
             <div class="note" style="margin-top:2px;">※ 원천징수된 금액의 단순 합계가 아니라, 분리과세(원천징수로 종결)와 종합소득세 확정세액(원천징수분+추가납부·환급 포함)을 더한 <b>연간 최종 확정세액</b>입니다.</div>
             <div class="note" style="margin-top:10px;">자세한 계산 과정과 기준은 <b>② 소득세 상세</b> 탭에서 확인하세요.</div>
         </div>
@@ -351,7 +418,7 @@
         </div>
 
         <p class="note">
-            ※ 본 계산은 종합소득세의 각종 인적·특별공제를 생략한 단순 추정치이며, 실제 세액은 개인 공제 항목, 국민연금 원천징수 실제 금액 등에 따라 달라질 수 있습니다.<br>
+            ※ 본 계산은 기본공제(본인공제)만 반영하고 그 외 인적·특별공제는 생략한 추정치이며, 실제 세액은 개인 공제 항목, 국민연금 원천징수 실제 금액 등에 따라 달라질 수 있습니다.<br>
             ※ 건강보험료는 화면내 입력한 소득 기준으로만 계산하며, 실제 고지액은 다른재산과 상한액/하한액 적용 등으로 다를 수 있습니다.
         </p>
     </div>
@@ -362,12 +429,15 @@
     <div id="tab2" class="tab-content">
         <div class="card rules">
             <h3>📐 소득세 계산 기준</h3>
-            <div class="row"><span class="lbl">가정</span><span class="val" style="font-weight:normal; text-align:right;">다른소득 없는 지역가입자, 종합소득세 각종 공제 생략</span></div>
+            <div class="row"><span class="lbl">가정</span><span class="val" style="font-weight:normal; text-align:right;">다른소득 없는 지역가입자, 기본공제(본인공제) 외 인적·특별공제는 생략</span></div>
             <div class="row"><span class="lbl">연금소득공제</span><span class="val" style="font-weight:normal; text-align:right;">350만원 이하 전액 / 700만원 이하 350만원+40% / 1,400만원 이하 490만원+20% / 초과 630만원+10% (한도 900만원)</span></div>
+            <div class="row"><span class="lbl">기본공제(본인공제)</span><span class="val" id="ruleBasicDeduction"></span></div>
             <div class="row"><span class="lbl">금융소득종합과세 기준금액</span><span class="val" id="ruleFinTaxThreshold"></span></div>
-            <div class="row"><span class="lbl">이자·배당 원천징수세율</span><span class="val" id="ruleFinWithholdRate"></span></div>
-            <div class="row"><span class="lbl">종합소득세율</span><span class="val" style="font-weight:normal; text-align:right;">2024년 이후 누진세율표 (6%~45%) 적용</span></div>
-            <div class="row"><span class="lbl">비교과세 (소득세법 §62)</span><span class="val" style="font-weight:normal; text-align:right;">종합과세 방식과 분리과세 유지 방식 중 <b>세액이 큰 쪽</b>으로 확정 → 금융소득 원천징수세액이 종합소득세 재계산으로 환급되는 일은 없음</span></div>
+            <div class="row"><span class="lbl">이자·배당 원천징수세율 (지방세 포함)</span><span class="val" id="ruleFinWithholdRate"></span></div>
+            <div class="row"><span class="lbl">종합소득세율 (국세)</span><span class="val" style="font-weight:normal; text-align:right;">2024년 이후 누진세율표 (6%~45%) 적용</span></div>
+            <div class="row"><span class="lbl">지방소득세</span><span class="val" id="ruleLocalSurtaxRate"></span></div>
+            <div class="row"><span class="lbl">배당가산(Gross-up)</span><span class="val" id="ruleGrossUpRate"></span></div>
+            <div class="row"><span class="lbl">비교과세 (소득세법 §62)</span><span class="val" style="font-weight:normal; text-align:right;">종합과세 방식과 분리과세 유지 방식 중 <b>국세 기준 세액이 큰 쪽</b>으로 확정 후 지방소득세 가산 → 금융소득 원천징수세액이 종합소득세 재계산으로 환급되는 일은 없음</span></div>
         </div>
 
         <div class="card">
@@ -375,20 +445,26 @@
             <div class="row"><span class="lbl">① 연금소득공제</span><span class="val" id="rPensionDeduction"></span></div>
             <div class="row"><span class="lbl">② 연금소득금액 (국민연금 수령액 - ①)</span><span class="val" id="rPensionIncomeAmt"></span></div>
             <div class="row"><span class="lbl">③ 금융소득 중 분리과세분(기준금액 이하) 원천세액</span><span class="val" id="rSepTax"></span></div>
-            <div class="row"><span class="lbl">④ 금융소득 중 종합과세 대상 초과분</span><span class="val" id="rFinExcess"></span></div>
-            <div class="row"><span class="lbl">⑤-A 종합과세 방식 세액 (② + ④를 합산해 누진세율 적용)</span><span class="val" id="rTaxA"></span></div>
-            <div class="row"><span class="lbl">⑤-B 분리과세 유지 방식 세액 (② 단독 누진세율 + ④ × 원천세율)</span><span class="val" id="rTaxB"></span></div>
-            <div class="row highlight"><span class="lbl">⑥ 종합소득세액 확정 (⑤-A, ⑤-B 중 큰 금액 · 비교과세)</span><span class="val" id="rComprehensiveTax"></span></div>
-            <div class="row"><span class="lbl">⑦ 기납부세액 (금융소득 초과분 원천징수, ④ × 원천세율)</span><span class="val" id="rFinWithheld"></span></div>
-            <div class="row"><span class="lbl">⑧ 기납부세액 (국민연금 원천징수, 입력값)</span><span class="val" id="rPensionWithheldOut"></span></div>
-            <div class="row highlight"><span class="lbl" id="rAdditionalLabel">⑨ 5월 종합소득세 신고 시 추가 납부액 (⑥-⑦-⑧)</span><span class="val" id="rAdditional"></span></div>
-            <div class="row total"><span class="lbl">연간 총 소득세 부담액 (③ 분리과세 최종세액 + ⑥ 종합소득세 확정세액)</span><span class="val" id="rTotalTax2"></span></div>
+            <div class="row"><span class="lbl">④ 금융소득 중 종합과세 대상 초과분 (이자+배당)</span><span class="val" id="rFinExcess"></span></div>
+            <div class="row"><span class="lbl">④-1 이자소득 초과분 / 배당소득 초과분</span><span class="val" id="rExcessSplit"></span></div>
+            <div class="row"><span class="lbl">⑤ 배당가산액 (Gross-up, 배당초과분 × 가산율)</span><span class="val" id="rGrossUp"></span></div>
+            <div class="row"><span class="lbl">⑥ 기본공제(본인공제)</span><span class="val" id="rBasicDeduction"></span></div>
+            <div class="row"><span class="lbl">⑦-A 종합과세 방식 국세 (②+④+⑤ 합산, 배당세액공제 반영)</span><span class="val" id="rTaxA"></span></div>
+            <div class="row"><span class="lbl">⑦-B 분리과세 유지 방식 국세 (② 단독 누진세율 + ④ × 원천세율(국세분))</span><span class="val" id="rTaxB"></span></div>
+            <div class="row highlight"><span class="lbl">⑧ 종합소득세 국세 확정 (⑦-A, ⑦-B 중 큰 금액 · 비교과세)</span><span class="val" id="rNationalTax"></span></div>
+            <div class="row"><span class="lbl">⑨ 지방소득세 (⑧ × 지방소득세율)</span><span class="val" id="rLocalTax"></span></div>
+            <div class="row highlight"><span class="lbl">⑩ 종합소득세 확정세액 (⑧+⑨, 국세+지방세)</span><span class="val" id="rComprehensiveTax"></span></div>
+            <div class="row"><span class="lbl">⑪ 기납부세액 (금융소득 초과분 원천징수, 국세+지방세 포함, ④ × 원천세율)</span><span class="val" id="rFinWithheld"></span></div>
+            <div class="row"><span class="lbl">⑫ 기납부세액 (국민연금 원천징수, 입력값)</span><span class="val" id="rPensionWithheldOut"></span></div>
+            <div class="row highlight"><span class="lbl" id="rAdditionalLabel">⑬ 5월 종합소득세 신고 시 추가 납부액 (⑩-⑪-⑫)</span><span class="val" id="rAdditional"></span></div>
+            <div class="row total"><span class="lbl">연간 총 소득세 부담액 (③ 분리과세 최종세액 + ⑩ 종합소득세 확정세액)</span><span class="val" id="rTotalTax2"></span></div>
             <div class="note" style="margin-top:2px;">※ 원천징수된 금액의 단순 합계가 아니라, 분리과세(원천징수로 종결)와 종합소득세 확정세액(원천징수분+추가납부·환급 포함)을 더한 연간 최종 확정세액입니다.</div>
         </div>
 
         <p class="note">
-            ※ 본 계산은 종합소득세의 각종 인적·특별공제를 생략한 단순 추정치이며, 실제 세액은 개인 공제 항목, 국민연금 원천징수 실제 금액 등에 따라 달라질 수 있습니다.<br>
-            ※ 금융소득종합과세는 소득세법 §62 비교과세 규정에 따라, 금융소득을 합산해도 분리과세보다 세액이 적어지는 경우에는 분리과세 방식(원천징수세율 유지) 세액이 그대로 적용되어 환급이 발생하지 않습니다.
+            ※ 본 계산은 기본공제(본인공제)만 반영하고 그 외 인적·특별공제는 생략한 추정치이며, 실제 세액은 개인 공제 항목, 국민연금 원천징수 실제 금액 등에 따라 달라질 수 있습니다.<br>
+            ※ 금융소득종합과세는 소득세법 §62 비교과세 규정에 따라, 금융소득을 합산해도 분리과세보다 세액이 적어지는 경우에는 분리과세 방식(원천징수세율 유지) 세액이 그대로 적용되어 환급이 발생하지 않습니다.<br>
+            ※ 국세(6~45% 누진세율)와 지방소득세(국세의 10%)를 구분해서 계산한 뒤 합산하며, 배당소득 초과분에는 배당가산(Gross-up) 및 배당세액공제를 적용합니다.
         </p>
     </div>
     <!-- ================= /탭 2 ================= -->
@@ -398,7 +474,7 @@
         <div class="card rules">
             <h3>📐 건강보험료 계산 기준</h3>
             <div class="row"><span class="lbl">가정</span><span class="val" style="font-weight:normal; text-align:right;">다른소득 없는 지역가입자 (소득월액보험료 기준)</span></div>
-            <div class="row"><span class="lbl">건강보험료율</span><span class="val" id="rulePremiumRate"></span></div>
+            <div class="row"><span class="lbl">건강보험료율 (장기요양보험료 포함)</span><span class="val" id="rulePremiumRate"></span></div>
             <div class="row"><span class="lbl">공적연금 반영비율</span><span class="val" id="rulePensionReflectRate"></span></div>
             <div class="row"><span class="lbl">금융소득 반영기준</span><span class="val" id="ruleFinPremiumThreshold"></span></div>
         </div>
@@ -465,13 +541,19 @@
     function calculateAll() {
         const pension = parseValue('pensionAmount') * 10000;
         const finIncome = parseValue('finIncome') * 10000;
+        const divIncome = Math.min(parseValue('divIncome') * 10000, finIncome);
         const pensionWithheld = parseValue('pensionWithheld');
 
         const premiumRate = parseValue('premiumRate') / 100;
         const pensionReflectRate = parseValue('pensionReflectRate') / 100;
         const finPremiumThreshold = parseValue('finPremiumThreshold') * 10000;
         const finTaxThreshold = parseValue('finTaxThreshold') * 10000;
-        const finWithholdRate = parseValue('finWithholdRate') / 100;
+        const finWithholdRate = parseValue('finWithholdRate') / 100; // 이자·배당 원천징수세율 (지방세 포함, 예: 15.4%)
+        const localSurtaxRate = parseValue('localSurtaxRate') / 100; // 지방소득세율 (국세의 %, 예: 10%)
+        const grossUpRate = parseValue('grossUpRate') / 100; // 배당가산율 (예: 11%)
+        const basicDeduction = parseValue('basicDeduction') * 10000; // 기본공제(본인공제)
+
+        const finWithholdRateNational = finWithholdRate / (1 + localSurtaxRate); // 원천징수세율 중 국세분 (예: 15.4/1.1=14%)
 
         // ---- 1) 국민건강보험료 ----
         const pensionReflect = pension * pensionReflectRate;
@@ -492,16 +574,37 @@
         // ---- 2) 소득세 ----
         const ded = pensionDeduction(pension);
         const pensionIncomeAmt = Math.max(0, pension - ded);
-        const finExcess = Math.max(0, finIncome - finTaxThreshold);
 
-        // 비교과세 (소득세법 §62): 종합과세 방식과 분리과세 유지 방식 중 큰 세액으로 확정
-        // → 금융소득 원천징수세액(15.4%)이 종합소득세 재계산으로 환급되지 않도록 함
-        const taxA = incomeTax(pensionIncomeAmt + finExcess); // 종합과세 방식 (전액 합산)
-        const taxB = incomeTax(pensionIncomeAmt) + finExcess * finWithholdRate; // 분리과세 유지 방식
-        const comprehensiveTax = Math.max(taxA, taxB);
+        // 금융소득 기준금액(2천만원) 배분: 이자소득 우선 충당 후 남은 한도만큼 배당소득 충당
+        const interestIncome = Math.max(0, finIncome - divIncome);
+        const interestInThreshold = Math.min(interestIncome, finTaxThreshold);
+        const remainThreshold = Math.max(0, finTaxThreshold - interestInThreshold);
+        const dividendInThreshold = Math.min(divIncome, remainThreshold);
+        const interestExcess = interestIncome - interestInThreshold;
+        const dividendExcess = divIncome - dividendInThreshold;
+        const finExcess = interestExcess + dividendExcess;
 
-        const sepTax = Math.min(finIncome, finTaxThreshold) * finWithholdRate;
-        const finWithheldTax = finExcess * finWithholdRate;
+        // 배당가산(Gross-up): 배당소득 초과분에 대해서만 적용
+        const grossUpAmount = dividendExcess * grossUpRate;
+
+        // 기본공제 반영한 과세표준 (국세 기준)
+        const taxableO = Math.max(0, pensionIncomeAmt - basicDeduction);
+        const taxableCombined = Math.max(0, pensionIncomeAmt + finExcess - basicDeduction);
+        const taxableCombinedGrossed = Math.max(0, pensionIncomeAmt + finExcess + grossUpAmount - basicDeduction);
+
+        // 비교과세 (소득세법 §62), 모두 국세(6~45%) 기준으로만 계산
+        const taxA_plain = incomeTax(taxableCombined);
+        const taxA_grossed = incomeTax(taxableCombinedGrossed);
+        // 배당세액공제: Gross-up 금액 한도로 공제하되, 원래 세액(Gross-up 전) 밑으로는 내려가지 않음
+        const taxA_national = Math.max(taxA_plain, taxA_grossed - grossUpAmount);
+        const taxB_national = incomeTax(taxableO) + finExcess * finWithholdRateNational;
+
+        const nationalTax = Math.max(taxA_national, taxB_national); // 종합소득세 국세 확정
+        const localTax = nationalTax * localSurtaxRate; // 지방소득세
+        const comprehensiveTax = nationalTax + localTax; // 종합소득세 확정세액 (국세+지방세)
+
+        const sepTax = Math.min(finIncome, finTaxThreshold) * finWithholdRate; // 분리과세 (국세+지방세 결합, 원천징수로 종결)
+        const finWithheldTax = finExcess * finWithholdRate; // 기납부세액 (국세+지방세 결합)
         const additional = comprehensiveTax - finWithheldTax - pensionWithheld;
 
         const totalTax = sepTax + comprehensiveTax;
@@ -511,10 +614,16 @@
         document.getElementById('rPensionIncomeAmt').textContent = formatWon(pensionIncomeAmt);
         document.getElementById('rSepTax').textContent = formatWon(sepTax);
         document.getElementById('rFinExcess').textContent = formatWon(finExcess);
-        document.getElementById('rTaxA').textContent = formatWon(taxA);
-        document.getElementById('rTaxB').textContent = formatWon(taxB);
+        document.getElementById('rExcessSplit').textContent = formatWon(interestExcess) + ' / ' + formatWon(dividendExcess);
+        document.getElementById('rGrossUp').textContent = formatWon(grossUpAmount);
+        document.getElementById('rBasicDeduction').textContent = formatWon(basicDeduction);
+        document.getElementById('rTaxA').textContent = formatWon(taxA_national);
+        document.getElementById('rTaxB').textContent = formatWon(taxB_national);
+        document.getElementById('rNationalTax').textContent = formatWon(nationalTax);
+        document.getElementById('rLocalTax').textContent = formatWon(localTax);
         document.getElementById('rComprehensiveTax').textContent = formatWon(comprehensiveTax);
         document.getElementById('rComprehensiveTaxBrief').textContent = formatWon(comprehensiveTax);
+        document.getElementById('rSepTaxBrief').textContent = formatWon(sepTax);
         document.getElementById('rWithheldTotalBrief').textContent = formatWon(finWithheldTax + pensionWithheld);
         document.getElementById('rFinWithheld').textContent = formatWon(finWithheldTax);
         document.getElementById('rPensionWithheldOut').textContent = formatWon(pensionWithheld);
@@ -523,7 +632,7 @@
 
         const additionalText = additional < 0 ? '5월 종합소득세 신고 시 환급받을 금액' : '5월 종합소득세 신고 시 추가 납부액';
         const additionalVal = formatWon(Math.abs(additional));
-        document.getElementById('rAdditionalLabel').textContent = '⑨ ' + additionalText + ' (⑥-⑦-⑧)';
+        document.getElementById('rAdditionalLabel').textContent = '⑬ ' + additionalText + ' (⑩-⑪-⑫)';
         document.getElementById('rAdditional').textContent = additionalVal;
         document.getElementById('rAdditionalLabelBrief').textContent = additionalText;
         document.getElementById('rAdditionalBrief').textContent = additionalVal;
@@ -535,11 +644,71 @@
         // ---- 3) 기준값 안내 (탭2, 탭3) ----
         document.getElementById('ruleFinTaxThreshold').textContent = (finTaxThreshold / 10000).toLocaleString('ko-KR') + '만원';
         document.getElementById('ruleFinWithholdRate').textContent = (finWithholdRate * 100).toLocaleString('ko-KR') + '%';
+        document.getElementById('ruleLocalSurtaxRate').textContent = '국세 × ' + (localSurtaxRate * 100).toLocaleString('ko-KR') + '%';
+        document.getElementById('ruleGrossUpRate').textContent = (grossUpRate * 100).toLocaleString('ko-KR') + '%';
+        document.getElementById('ruleBasicDeduction').textContent = formatWon(basicDeduction);
         document.getElementById('rulePremiumRate').textContent = (premiumRate * 100).toLocaleString('ko-KR') + '%';
         document.getElementById('rulePensionReflectRate').textContent = (pensionReflectRate * 100).toLocaleString('ko-KR') + '%';
         document.getElementById('ruleFinPremiumThreshold').textContent = (finPremiumThreshold / 10000).toLocaleString('ko-KR') + '만원 초과 시 전액 반영';
 
         document.getElementById('resultWrap').style.display = 'block';
+    }
+
+    function printReport() {
+        // 아직 계산하지 않았다면 먼저 계산 실행
+        if (document.getElementById('resultWrap').style.display !== 'block') {
+            calculateAll();
+        }
+
+        // 세부 기준값 설정 영역을 인쇄용으로 펼침 (인쇄 후 원래 상태로 복원)
+        const details = document.getElementById('settingsDetails');
+        const wasOpen = details.open;
+        details.open = true;
+
+        // 입력값 요약표 생성
+        const inputFields = [
+            ['pensionAmount', '연간 국민연금(공적연금) 수령액 (만원)'],
+            ['finIncome', '연간 금융소득 (이자+배당, 만원)'],
+            ['divIncome', '그 중 배당소득 금액 (만원)'],
+            ['pensionWithheld', '국민연금 기 원천징수세액 (연간, 원)'],
+            ['premiumRate', '건강보험료율 (%)'],
+            ['pensionReflectRate', '건보료 - 공적연금 반영비율 (%)'],
+            ['finPremiumThreshold', '건보료 - 금융소득 반영기준 (만원)'],
+            ['finTaxThreshold', '금융소득종합과세 기준금액 (만원)'],
+            ['finWithholdRate', '이자·배당 원천징수세율 (%, 지방소득세 포함)'],
+            ['localSurtaxRate', '지방소득세율 (종합소득세 국세의 %)'],
+            ['grossUpRate', '배당가산율 Gross-up (%)'],
+            ['basicDeduction', '기본공제 (본인공제, 만원)']
+        ];
+        let rowsHtml = '';
+        inputFields.forEach(function (pair) {
+            const id = pair[0], label = pair[1];
+            const val = document.getElementById(id).value;
+            rowsHtml += '<div class="row"><span class="lbl">' + label + '</span><span class="val">' + val + '</span></div>';
+        });
+
+        const now = new Date();
+        const dateStr = now.toLocaleString('ko-KR');
+
+        document.getElementById('printSummary').innerHTML =
+            '<div class="print-header">' +
+            '<h2>💰 은퇴소득 소득세 · 건강보험료 계산 결과</h2>' +
+            '<p>출력일시: ' + dateStr + '</p>' +
+            '</div>' +
+            '<div class="print-section-title">📝 입력값 요약</div>' +
+            '<div class="card">' + rowsHtml + '</div>';
+
+        // 인쇄 후 원래 상태로 복원
+        const restore = function () {
+            details.open = wasOpen;
+            window.removeEventListener('afterprint', restore);
+        };
+        window.addEventListener('afterprint', restore);
+
+        window.print();
+
+        // afterprint 미지원 브라우저를 위한 안전장치
+        setTimeout(restore, 1000);
     }
 
     function switchTab(n) {
